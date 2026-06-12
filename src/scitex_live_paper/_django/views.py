@@ -22,7 +22,7 @@ import json
 import logging
 from typing import Any, Callable, Mapping
 
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseBase, JsonResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 
@@ -124,7 +124,11 @@ def api_dispatch(request, endpoint: str) -> HttpResponse:
 
     try:
         payload = handler(request)
-        if isinstance(payload, HttpResponse):
+        # Accept the abstract HttpResponseBase so StreamingHttpResponse
+        # subclasses (in particular FileResponse, used by the PDF
+        # handler for byte streaming) pass through too — the previous
+        # narrow HttpResponse check rejected them.
+        if isinstance(payload, HttpResponseBase):
             return payload
         if not isinstance(payload, Mapping):
             # Loud, named error — never let a handler quietly return a
