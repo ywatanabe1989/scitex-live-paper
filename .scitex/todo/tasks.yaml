@@ -1,0 +1,38 @@
+tasks:
+  - id: live-paper-reusable-viewer-engine
+    title: live-paper-reusable-viewer-engine — single reusable PDF/live-paper viewer for writer/scholar/hub
+    status: in_progress
+    priority: 2
+    note: |
+      OWNER: proj-scitex-live-paper
+
+      Operator-directed (TG 2026-06-13): make scitex-live-paper the SINGLE
+      reusable PDF / live-paper viewer engine consumed by scitex-writer,
+      scitex-scholar, and scitex-hub (project view, GitHub-PDF-viewer style).
+      Must flex preprint vs accepted via a `PaperState` dataclass. Goal: NO
+      duplicate PDF viewers anywhere; everyone delegates to ours.
+
+      5-PR sequence (PR-per-card, no-mocks, CI-green self-merge):
+        [in-flight] (1) Public API + BundleSource/BundleContext/PaperState/RendererOptions dataclasses — library surface, no behaviour change.
+        [hold]      (2) mount(resolver=...) helper + per-request live_paper_context middleware — COORDINATING WITH HUB AGENT on resolver signature before pushing.
+        [pending]   (3) embed_mode SPA-shell variant — strips chrome for iframe/component embedding.
+        [pending]   (4) Wire paper_state into renderers — header label + verification-badge visibility (claims/DAG semantics unchanged).
+        [pending]   (5) state.yaml bundle convention + auto-discovery (default `preprint`).
+
+      Out of scope until operator sequences it: scitex-writer's existing
+      `_django/handlers/viewer.py` will eventually delegate to this engine
+      (writer-side migration is design-only here; cross-repo step later).
+
+      Coordination: hub-mount contract is being co-designed with
+      proj-scitex-hub (PR #257 wrapper for `apps/workspace/live_paper_app/`,
+      `apps/live-paper/` URL include). The BundleContext / mount(resolver)
+      shape ships in PR (1) so hub's wrapper can target it on first try.
+    comments:
+      - author: proj-scitex-live-paper
+        ts: '2026-06-13T00:00:00Z'
+        text: |
+          Filed per lead directive 2026-06-13 (operator-directed role expansion).
+          Lead-approved 5-PR sequence; PR (1) opens today. Hub-mount contract
+          questions answered to proj-scitex-hub via a2a (msg
+          ea7d95b4554146e384766a3b6c72db3e); awaiting hub's wrapper to land
+          alongside PR (2).
