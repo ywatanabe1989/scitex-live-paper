@@ -1,0 +1,129 @@
+/* scitex-live-paper / M1 DAG navigator CSS
+ *
+ * Node-class taxonomy is owned upstream by scitex-clew; we just style
+ * what mermaid renders. The taxonomy uses node-label prefixes
+ * (Source / Input / Processing / Output / Claim) — we match on those
+ * via attribute selectors so a new clew class only needs one new line
+ * here, no Python change.
+ */
+
+:root {
+  --lp-bg: #fafbfc;
+  --lp-fg: #111;
+  --lp-muted: #555;
+  --lp-border: #d0d7de;
+  --lp-overlay-bg: rgba(0, 0, 0, 0.04);
+  --lp-overlay-card: #fff;
+}
+
+* { box-sizing: border-box; }
+
+body.live-paper {
+  margin: 0;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.live-paper-header,
+.live-paper-footer {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--lp-border);
+  background: #fff;
+}
+
+.live-paper-footer {
+  border-bottom: 0;
+  border-top: 1px solid var(--lp-border);
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+
+.live-paper-title { margin: 0; font-size: 18px; font-weight: 600; }
+.live-paper-subtitle { margin: 2px 0 0 0; font-size: 12px; color: var(--lp-muted); }
+
+.lp-dag-shell {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.mermaid {
+  display: flex;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--lp-border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow: auto;
+}
+
+/* mermaid renders node labels into <g class="node ..."><foreignObject>...
+ * We tag the rendered nodes via the dag.js post-render pass so we can
+ * hover-cursor + click them consistently. */
+.mermaid .node[data-lp-node-kind] rect,
+.mermaid .node[data-lp-node-kind] polygon,
+.mermaid .node[data-lp-node-kind] circle {
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.mermaid .node[data-lp-node-kind]:hover rect,
+.mermaid .node[data-lp-node-kind]:hover polygon,
+.mermaid .node[data-lp-node-kind]:hover circle {
+  filter: brightness(0.93);
+}
+
+.lp-dag-overlay {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 320px;
+  background: var(--lp-overlay-card);
+  border: 1px solid var(--lp-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
+  padding: 14px 16px;
+  z-index: 10;
+}
+
+.lp-dag-overlay-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  border: 0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--lp-muted);
+}
+
+.lp-dag-overlay-title {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.lp-dag-overlay-detail {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.lp-dag-overlay-detail dt {
+  font-weight: 600;
+  color: var(--lp-muted);
+}
+.lp-dag-overlay-detail dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.lp-dag-empty {
+  text-align: center;
+  color: var(--lp-muted);
+  padding: 40px 0;
+}
