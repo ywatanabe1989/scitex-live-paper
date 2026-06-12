@@ -36,15 +36,52 @@ HandlerReturn = Any
 HandlerFn = Callable[..., HandlerReturn]
 
 
+# Truthy query-string values for ``?embed=...``. Anything outside this set
+# (or absence of the param) leaves the standalone chrome in place.
+_EMBED_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+def _is_embed_mode(request) -> bool:
+    """Whether the request asks for the chrome-less embed shell.
+
+    Selection lever for PR #3: query string ``?embed=1`` (also accepts
+    ``true`` / ``yes`` / ``on``, case-insensitive). PR #2's
+    ``mount(resolver=...)`` middleware will additionally let hosts set
+    ``BundleContext.options.embed_mode=True`` to flip the same switch
+    without needing a query string.
+    """
+    raw = request.GET.get("embed")
+    if raw is None:
+        return False
+    return raw.strip().lower() in _EMBED_TRUTHY
+
+
 def viewer_page(request) -> HttpResponse:
     """Render the SPA shell.
 
-    The shell carries ``data-api-base="/api/"`` on the root element so the
-    same template works both under the standalone server (root mount) and
-    under the hub mount (``/viewer-v2/`` prefix, served via ``include()``).
+    Two template variants:
+
+    - ``live_paper/viewer.html`` — full standalone page with header
+      chrome (subtitle, scitex-clew boundary callout, status pre block).
+      Used by ``scitex-live-paper serve`` when the operator hits it
+      directly from a browser.
+    - ``live_paper/viewer_embed.html`` — minimal page with no chrome,
+      just the ``#live-paper-root`` div + assets. Used when host apps
+      (hub project view, writer preview, scholar) iframe the viewer
+      into their own page. Selected when ``?embed=1`` is on the URL.
+
+    Both variants carry ``data-api-base`` on the root element so the
+    SPA boots identically; the embed shell additionally sets
+    ``data-embed-mode="1"`` so the JS can suppress any in-app chrome
+    a host doesn't want.
     """
+    template = (
+        "live_paper/viewer_embed.html"
+        if _is_embed_mode(request)
+        else "live_paper/viewer.html"
+    )
     html = render_to_string(
-        "live_paper/viewer.html",
+        template,
         {"api_base": "api/"},
         request=request,
     )

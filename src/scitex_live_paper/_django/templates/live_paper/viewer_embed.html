@@ -1,0 +1,26 @@
+{% load static %}<!doctype html>
+{# Embed-mode SPA shell — minimal, no header/footer chrome.
+
+   Renders the SAME #live-paper-root + assets as `viewer.html` so the
+   frontend boots identically, but strips the standalone-page header /
+   subtitle / status-pre markup. Hosts (scitex-hub project view,
+   scitex-writer preview, scitex-scholar) iframe this template so the
+   viewer drops cleanly into their own page chrome.
+
+   Selection lever: query string `?embed=1` (or `?embed=true`).
+   Future PR (#2): `BundleContext.options.embed_mode` plumbed through
+   the `mount(resolver=...)` middleware also triggers this template. #}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SciTeX Live Paper (embedded)</title>
+  <link rel="stylesheet" href="{% static 'live_paper/css/viewer.css' %}">
+</head>
+<body class="live-paper-embed">
+  <main id="live-paper-root" data-api-base="/{{ api_base }}" data-embed-mode="1">
+    <pre id="live-paper-bundle-info">{}</pre>
+  </main>
+  <script src="{% static 'live_paper/js/viewer.js' %}"></script>
+</body>
+</html>
