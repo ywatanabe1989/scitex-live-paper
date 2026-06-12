@@ -1,0 +1,58 @@
+name: pytest
+
+# CI test runner for scitex-live-paper.
+#
+# Runs the STX-TQ test suite on the supported Python matrix (3.11 / 3.12 / 3.13).
+# 3.10 is declared in pyproject classifiers as the floor but CI matrix tracks
+# the currently-maintained minor versions per the SciTeX project policy.
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: pytest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: pytest (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package (no upstream scitex deps)
+        run: |
+          python -m pip install --upgrade pip
+          # The runtime requires list pins `scitex-dev` / `scitex-ui`
+          # which are not yet on PyPI; for the test matrix we install
+          # the package WITHOUT its declared deps and then layer on
+          # the minimum runtime + test deps the M1 surface actually
+          # needs (loader uses pyyaml; renderer/CLI scaffolding stays
+          # skipped until those modules land in their own PRs).
+          python -m pip install --no-deps -e .
+          python -m pip install pytest pyyaml jinja2 click
+
+      - name: Show environment
+        run: |
+          python --version
+          python -m pip list
+
+      - name: Run pytest
+        run: |
+          python -m pytest -ra
