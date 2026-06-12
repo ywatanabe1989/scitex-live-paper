@@ -34,6 +34,10 @@ def bundle_info(request) -> Mapping[str, Any]:
     - ``manuscript`` — filename of ``manuscript.pdf`` or ``.tex``
     - ``dag_present`` — whether ``dag.mmd`` was non-empty
     - ``bundle_path`` — resolved absolute path of the loaded bundle
+    - ``paper_state`` — render-time lifecycle metadata: ``stage``,
+      ``header_label``, ``journal``, ``doi``, ``accepted_at``,
+      ``pinned_commit``, ``show_verification_badge``,
+      ``re_verify_enabled``. Drives the embed-mode SPA chrome.
     """
     state = get_bundle_state()
     bundle = state.bundle
@@ -42,10 +46,21 @@ def bundle_info(request) -> Mapping[str, Any]:
         if bundle.manuscript_path is not None
         else None
     )
+    ps = bundle.paper_state
     return {
         "claim_count": state.claim_count,
         "schema": bundle.schema_version,
         "manuscript": manuscript_name,
         "dag_present": bool(bundle.dag.strip()),
         "bundle_path": str(state.bundle_path),
+        "paper_state": {
+            "stage": ps.stage,
+            "header_label": ps.header_label(),
+            "journal": ps.journal,
+            "doi": ps.doi,
+            "accepted_at": ps.accepted_at,
+            "pinned_commit": ps.pinned_commit,
+            "show_verification_badge": ps.show_verification_badge,
+            "re_verify_enabled": ps.re_verify_enabled,
+        },
     }

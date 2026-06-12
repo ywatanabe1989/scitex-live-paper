@@ -95,6 +95,10 @@ def render_index(
 
     env = _jinja_env()
     template = env.get_template("index.html.j2")
+    # PR (4): render-time lifecycle metadata. Reads straight off the
+    # loaded bundle (which itself respects state.yaml + host overrides
+    # via BundleContext).
+    paper_state = bundle.paper_state
     html = template.render(
         title=title or "Live Paper",
         viewer_url=viewer_url,
@@ -105,6 +109,14 @@ def render_index(
         manuscript_filename=bundle.manuscript_path.name,
         has_dag=bool(bundle.dag and bundle.dag.strip()),
         schema_version=bundle.schema_version or "",
+        # Render-time paper-state surface — header label + badge + meta.
+        paper_state_stage=paper_state.stage,
+        paper_state_label=paper_state.header_label(),
+        paper_state_journal=paper_state.journal,
+        paper_state_doi=paper_state.doi,
+        paper_state_pinned_commit=paper_state.pinned_commit,
+        show_verification_badge=paper_state.show_verification_badge,
+        re_verify_enabled=paper_state.re_verify_enabled,
     )
     index_html = out_dir / "index.html"
     index_html.write_text(html, encoding="utf-8")

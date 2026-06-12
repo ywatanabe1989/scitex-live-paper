@@ -6,9 +6,18 @@
 <meta name="generator" content="scitex-live-paper">
 <link rel="stylesheet" href="{{ css_url }}">
 </head>
-<body class="live-paper">
+<body class="live-paper" data-paper-stage="{{ paper_state_stage }}">
 <header class="live-paper-header">
   <h1 class="live-paper-title">{{ title|default('Live Paper') }}</h1>
+  <p class="live-paper-state-line">
+    <span class="lp-paper-state-label" data-paper-stage="{{ paper_state_stage }}">{{ paper_state_label }}</span>
+    {% if show_verification_badge %}
+    <span class="lp-verification-badge"
+          data-state="{{ paper_state_stage }}"
+          data-re-verify-enabled="{{ 'true' if re_verify_enabled else 'false' }}"
+          title="Verification badge (M2 re-verify {{ 'enabled' if re_verify_enabled else 'unavailable — no pinned_commit' }})">verified</span>
+    {% endif %}
+  </p>
   <p class="live-paper-subtitle">scitex-live-paper · static site · opens from file://</p>
 </header>
 
@@ -47,6 +56,20 @@
       {% if schema_version %}
       <dt>claims.json schema</dt>
       <dd><code>{{ schema_version }}</code></dd>
+      {% endif %}
+      <dt>Stage</dt>
+      <dd class="lp-paper-state-meta" data-paper-stage="{{ paper_state_stage }}">{{ paper_state_stage }}</dd>
+      {% if paper_state_journal %}
+      <dt>Journal</dt>
+      <dd>{{ paper_state_journal }}</dd>
+      {% endif %}
+      {% if paper_state_doi %}
+      <dt>DOI</dt>
+      <dd><code>{{ paper_state_doi }}</code></dd>
+      {% endif %}
+      {% if paper_state_pinned_commit %}
+      <dt>Re-verify pin</dt>
+      <dd><code>{{ paper_state_pinned_commit }}</code></dd>
       {% endif %}
     </dl>
   </section>
