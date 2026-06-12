@@ -1,0 +1,42 @@
+{
+  "schema": "scitex-clew.claims/v1",
+  "claims": [
+    {
+      "claim_id": "claim_a1b2c3d4e5f6",
+      "file_path": "main.tex",
+      "line_number": 42,
+      "claim_type": "figure",
+      "claim_value": "Fig 1 shows p<0.05",
+      "source_session": "sess_001",
+      "source_file": "scripts/03_analyze.py",
+      "source_hash": "deadbeefcafef00d",
+      "registered_at": "2026-06-01T10:00:00Z",
+      "verified_at": "2026-06-10T14:30:00Z",
+      "status": "verified",
+      "anchor": {"page": 3, "bbox": [120.0, 480.0, 360.0, 540.0]}
+    },
+    {
+      "claim_id": "claim_f6e5d4c3b2a1",
+      "file_path": "main.tex",
+      "line_number": 88,
+      "claim_type": "statistic",
+      "claim_value": "p = 0.003",
+      "source_session": "sess_002",
+      "source_file": "scripts/04_stats.R",
+      "source_hash": "1234567890abcdef",
+      "status": "stale",
+      "anchor": {"page": 5, "bbox": [80.0, 120.0, 280.0, 160.0]}
+    },
+    {
+      "claim_id": "claim_999888777666",
+      "file_path": "main.tex",
+      "line_number": 130,
+      "claim_type": "value",
+      "claim_value": "n = 15",
+      "source_session": null,
+      "source_file": null,
+      "source_hash": null,
+      "status": "registered"
+    }
+  ]
+}

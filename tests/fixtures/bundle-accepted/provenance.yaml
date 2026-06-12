@@ -1,0 +1,23 @@
+schema: scitex-clew.provenance/v1
+project:
+  name: bundle-min
+  commit: 0000000000000000000000000000000000000000
+sessions:
+  sess_001:
+    role: processing
+    script: scripts/03_analyze.py
+    inputs:
+      - hash: aaaaaaaaaaaaaaaa
+        path: raw_data.csv
+    outputs:
+      - hash: deadbeefcafef00d
+        path: fig1.png
+  sess_002:
+    role: processing
+    script: scripts/04_stats.R
+    inputs:
+      - hash: aaaaaaaaaaaaaaaa
+        path: raw_data.csv
+    outputs:
+      - hash: 1234567890abcdef
+        path: stats.csv
