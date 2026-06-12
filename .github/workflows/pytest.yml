@@ -36,15 +36,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install package (with test extras)
+      - name: Install package (no upstream scitex deps)
         run: |
           python -m pip install --upgrade pip
-          # Install the package itself plus the [test] extra. We install
-          # the renderer/CLI deps via the project's own requires list, but
-          # deliberately do NOT pull `scitex-dev`/`scitex-ui` if they are
-          # not yet published to PyPI — fall back to a minimal direct
-          # install of the test runner so the matrix stays green while
-          # the upstream packages are still pre-release.
+          # The runtime requires list pins `scitex-dev` / `scitex-ui`
+          # which are not yet on PyPI; for the test matrix we install
+          # the package WITHOUT its declared deps and then layer on
+          # the minimum runtime + test deps the M1 surface actually
+          # needs (loader uses pyyaml; renderer/CLI scaffolding stays
+          # skipped until those modules land in their own PRs).
+          python -m pip install --no-deps -e .
           python -m pip install pytest pyyaml jinja2 click
 
       - name: Show environment
