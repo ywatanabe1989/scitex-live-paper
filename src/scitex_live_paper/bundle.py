@@ -8,6 +8,10 @@ Reads an accepted manuscript bundle directory laid out as:
       dag.mmd            # mermaid source string (from clew)
       figz/              # figure blobs (figz / pltz)
       provenance.yaml    # hash-linked artefacts
+      state.yaml         # OPTIONAL render-time lifecycle metadata
+                         # (preprint / accepted / published, journal,
+                         # DOI, pinned re-verify commit). Absent →
+                         # defaults to ``PaperState(stage="preprint")``.
 
 Boundary
 --------
@@ -15,6 +19,12 @@ Boundary
 the fields we need to *render* — id / type / status / hash / source link
 — and stash everything else under ``Claim.extras`` so forward-compatible
 fields added by ``scitex-clew`` flow through untouched.
+
+The ``state.yaml`` convention is owned by **this** package (render-time
+metadata — header label, re-verify pin) and does not extend or modify
+the upstream claim / DAG schemas. Hosts can override at render/mount
+time via :class:`scitex_live_paper.BundleContext`; the value here is
+the bundle's own default.
 
 If a feature requires a new claim field, **open the upstream issue against
 ``scitex-clew``** — never invent fields here.
@@ -25,11 +35,46 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
+if TYPE_CHECKING:  # pragma: no cover - import cycle guard
+    from ._types import PaperState, PaperStage
+
 __all__ = ["Bundle", "Claim", "load", "BundleError"]
+
+
+# Keys ``state.yaml`` may carry. Anything else is preserved verbatim
+# inside ``PaperState`` via field mapping; truly unknown keys are
+# ignored (forward-compatible). Mirrors the cautious approach we use
+# for ``Claim.extras``.
+_STATE_TYPED_FIELDS = frozenset(
+    {
+        "stage",
+        "journal",
+        "doi",
+        "accepted_at",
+        "pinned_commit",
+    }
+)
+
+#: Stages the loader accepts in ``state.yaml``. Mirrors
+#: :data:`scitex_live_paper.PaperStage` — keep in sync.
+_VALID_STAGES = frozenset(
+    {"draft", "preprint", "in_review", "accepted", "published"}
+)
+
+
+def _default_paper_state() -> "PaperState":
+    """Return :class:`PaperState` default (``stage="preprint"``).
+
+    Lazy import so :mod:`bundle` stays importable without forcing
+    :mod:`._types` first (the two re-export through ``__init__``).
+    """
+    from ._types import PaperState
+
+    return PaperState()
 
 
 class BundleError(ValueError):
@@ -120,6 +165,13 @@ class Bundle:
         Optional ``"schema"`` value carried from ``claims.json`` (passes
         through for the renderer to display; this package does not
         validate the version).
+    paper_state
+        Render-time lifecycle metadata loaded from the bundle's
+        optional ``state.yaml`` (see :func:`_load_paper_state`). Absent
+        file → :class:`PaperState` default (``stage="preprint"``).
+        Hosts can override at render/mount time via
+        :class:`scitex_live_paper.BundleContext.paper_state`; the value
+        here is the bundle's own default.
     """
 
     root: Path
@@ -129,6 +181,7 @@ class Bundle:
     manuscript_path: Path
     figz_dir: Path
     schema_version: str | None = None
+    paper_state: "PaperState" = field(default_factory=_default_paper_state)
 
 
 def _resolve_manuscript(root: Path) -> Path:
@@ -197,6 +250,82 @@ def _load_provenance(path: Path) -> dict[str, Any]:
     return parsed
 
 
+def _load_paper_state(path: Path) -> "PaperState":
+    """Parse ``state.yaml`` into :class:`PaperState`; absent → preprint default.
+
+    The ``state.yaml`` schema is intentionally tiny — a flat mapping of
+    the :class:`PaperState` fields:
+
+    .. code-block:: yaml
+
+       stage: accepted             # required if file present; one of the
+                                   # five PaperStage literals.
+       journal: Nature             # optional
+       doi: 10.1038/s41586-...     # optional
+       accepted_at: 2026-06-01...  # optional ISO-8601 string
+       pinned_commit: abc123...    # optional, for M2 re-verify
+
+    Unknown keys are ignored (forward-compatible). Malformed values
+    raise :class:`BundleError` with a clear message — never silently
+    fall back to the default, that would mask operator typos.
+    """
+    from ._types import PaperState
+
+    if not path.exists():
+        return PaperState()
+
+    text = path.read_text(encoding="utf-8")
+    if not text.strip():
+        return PaperState()
+
+    parsed = yaml.safe_load(text)
+    if parsed is None:
+        return PaperState()
+    if not isinstance(parsed, dict):
+        raise BundleError("state.yaml: top level must be a mapping")
+
+    stage = parsed.get("stage", "preprint")
+    if not isinstance(stage, str):
+        raise BundleError(
+            f"state.yaml: 'stage' must be a string, got {type(stage).__name__}"
+        )
+    if stage not in _VALID_STAGES:
+        raise BundleError(
+            f"state.yaml: unknown stage {stage!r} "
+            f"(expected one of {sorted(_VALID_STAGES)!r})"
+        )
+
+    # All other fields are optional strings; raise loud if a host writes
+    # a non-string-coercible value by accident. ``accepted_at`` is a
+    # known footgun: an unquoted ``2026-06-01T10:00:00Z`` parses as a
+    # ``datetime`` under YAML's implicit timestamp tag, so we coerce
+    # those (and dates) to ISO strings on the way through. Anything
+    # else non-string is rejected loudly.
+    import datetime as _datetime  # noqa: WPS433 — local: only this branch needs it
+
+    kwargs: dict[str, Any] = {"stage": stage}
+    for key in ("journal", "doi", "accepted_at", "pinned_commit"):
+        if key not in parsed:
+            continue
+        value = parsed[key]
+        if value is None:
+            continue  # explicit null is equivalent to absent
+        if isinstance(value, str):
+            kwargs[key] = value
+            continue
+        if isinstance(value, (_datetime.datetime, _datetime.date)):
+            # YAML auto-parsed an ISO timestamp / date for us; convert
+            # back to its canonical string so the operator-visible form
+            # in PaperState stays a plain str.
+            kwargs[key] = value.isoformat()
+            continue
+        raise BundleError(
+            f"state.yaml: {key!r} must be a string, got {type(value).__name__}"
+        )
+
+    return PaperState(**kwargs)  # type: ignore[arg-type]
+
+
 def load(path: str | Path) -> Bundle:
     """Load a bundle directory into a :class:`Bundle`.
 
@@ -224,6 +353,7 @@ def load(path: str | Path) -> Bundle:
     claims, schema_version = _load_claims(root / "claims.json")
     dag = _load_dag(root / "dag.mmd")
     provenance = _load_provenance(root / "provenance.yaml")
+    paper_state = _load_paper_state(root / "state.yaml")
     figz_dir = root / "figz"
 
     return Bundle(
@@ -234,4 +364,5 @@ def load(path: str | Path) -> Bundle:
         manuscript_path=manuscript_path,
         figz_dir=figz_dir,
         schema_version=schema_version,
+        paper_state=paper_state,
     )

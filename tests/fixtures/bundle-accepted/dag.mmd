@@ -1,0 +1,8 @@
+graph LR
+    S1[Source<br/>01_download.py] --> I1[Input<br/>raw_data.csv]
+    I1 --> P1[Processing<br/>03_analyze.py]
+    P1 --> O1[Output<br/>fig1.png]
+    O1 --> C1[Claim<br/>claim_a1b2c3d4e5f6]
+    I1 --> P2[Processing<br/>04_stats.R]
+    P2 --> O2[Output<br/>stats.csv]
+    O2 --> C2[Claim<br/>claim_f6e5d4c3b2a1]
