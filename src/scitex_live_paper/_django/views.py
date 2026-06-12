@@ -68,13 +68,20 @@ def api_dispatch(request, endpoint: str) -> HttpResponse:
 
     try:
         payload = handler(request)
-    except Exception as exc:  # pragma: no cover - defensive
+        if isinstance(payload, HttpResponse):
+            return payload
+        if not isinstance(payload, Mapping):
+            # Loud, named error — never let a handler quietly return a
+            # list/None/str and have the operator chase a bare TypeError
+            # from deep inside django.http.response.
+            raise TypeError(
+                f"handler for {endpoint!r} must return a Mapping or "
+                f"HttpResponse, got {type(payload).__name__}"
+            )
+        return JsonResponse(payload)
+    except Exception as exc:
         logger.exception("[live-paper] handler %s raised", endpoint)
         return JsonResponse({"error": str(exc)}, status=500)
-
-    if isinstance(payload, HttpResponse):
-        return payload
-    return JsonResponse(payload)
 
 
 def _read_body_json(request) -> Mapping[str, Any]:
