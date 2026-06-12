@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=68", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scitex-live-paper"
+version = "0.1.0-alpha"
+description = "Interactive, AI-verifiable live rendering of research manuscripts (consumer of scitex-clew claim model). Part of SciTeX."
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.10"
+authors = [
+    { name = "Yusuke Watanabe", email = "noreply@scitex.ai" },
+]
+keywords = [
+    "scitex",
+    "live-paper",
+    "interactive-paper",
+    "claims",
+    "clew",
+    "viewer",
+    "ara",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+dependencies = [
+    "scitex-dev>=0.11.7",
+    "scitex-ui>=0.1.0",
+    "click>=8.0",
+    "jinja2>=3.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+django = [
+    "django>=4.2",
+]
+mcp = [
+    "fastmcp>=2.0",
+]
+test = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+scitex-live-paper = "scitex_live_paper._cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ywatanabe1989/scitex-live-paper"
+Repository = "https://github.com/ywatanabe1989/scitex-live-paper"
+Issues = "https://github.com/ywatanabe1989/scitex-live-paper/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["scitex_live_paper*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
