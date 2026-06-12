@@ -46,7 +46,7 @@ jobs:
           # needs (loader uses pyyaml; renderer/CLI scaffolding stays
           # skipped until those modules land in their own PRs).
           python -m pip install --no-deps -e .
-          python -m pip install pytest pyyaml jinja2 click
+          python -m pip install pytest pyyaml jinja2 click 'django>=4.2'
 
       - name: Show environment
         run: |

@@ -1,0 +1,26 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SciTeX Live Paper</title>
+  <link rel="stylesheet" href="{% static 'live_paper/css/viewer.css' %}">
+</head>
+<body>
+  <main id="live-paper-root" data-api-base="/{{ api_base }}">
+    <header class="live-paper-header">
+      <h1>SciTeX Live Paper</h1>
+      <p class="subtitle">
+        Read-only viewer for accepted manuscript bundles.
+        Claim model owned upstream by
+        <a href="https://github.com/ywatanabe1989/scitex-clew">scitex-clew</a>.
+      </p>
+    </header>
+    <section class="live-paper-status">
+      <p>Loading bundle info…</p>
+      <pre id="live-paper-bundle-info">{}</pre>
+    </section>
+  </main>
+  <script src="{% static 'live_paper/js/viewer.js' %}"></script>
+</body>
+</html>

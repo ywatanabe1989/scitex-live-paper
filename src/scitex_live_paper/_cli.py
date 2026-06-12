@@ -152,6 +152,41 @@ def render_cmd(bundle_path: str, out_dir: str, title: str | None) -> None:
     click.echo(f"  dag      : {result.dag_html.relative_to(result.out_dir)}")
 
 
+@cli.command("serve")
+@click.argument(
+    "bundle_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
+)
+@click.option(
+    "--host",
+    default="127.0.0.1",
+    show_default=True,
+    help="Interface to bind the dev server to.",
+)
+@click.option(
+    "--port",
+    default=8765,
+    show_default=True,
+    type=int,
+    help="Port to bind the dev server to.",
+)
+def serve_cmd(bundle_path: str, host: str, port: int) -> None:
+    """Run the standalone Django dev server pinned to BUNDLE_PATH.
+
+    Requires the ``[django]`` extra. The viewer mounts at ``/`` and the
+    catch-all API dispatcher mounts at ``/<endpoint>`` (e.g. ``/api/ping``,
+    ``/api/bundle-info``).
+    """
+    try:
+        from scitex_live_paper._django._server import serve as _serve  # type: ignore[import-not-found]
+    except ImportError as exc:  # pragma: no cover - exercised only without [django]
+        raise click.ClickException(
+            "the `serve` command requires the [django] extra — "
+            "install with: pip install 'scitex-live-paper[django]'"
+        ) from exc
+    _serve(bundle_path, host=host, port=port)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entrypoint used by the ``[project.scripts]`` declaration.
 
