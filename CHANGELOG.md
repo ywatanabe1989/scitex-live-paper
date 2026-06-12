@@ -4,6 +4,10 @@ All notable changes to `scitex-live-paper` are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `scitex_live_paper.bundle` module: lenient bundle loader (`load(path) -> Bundle`) reading `manuscript.{pdf,tex}`, `claims.json`, `dag.mmd`, `provenance.yaml`, `figz/` (closes #3). `Claim` dataclass **mirrors** `scitex_clew.Claim` — unknown clew fields (e.g. renderer-side `anchor` metadata, future schema additions) flow through into `Claim.extras` so a clew schema bump does not require a release here.
+- `tests/fixtures/bundle-min/` minimal fixture (3 claims, mixed `status`, mermaid DAG, hash-linked provenance) plus STX-TQ-compliant `tests/bundle/test_load.py` covering happy path, lenient shapes, and error paths.
+
 ### Changed
 - README rewritten to lead with the **web-readable foundation** framing and the **thin-consumer** boundary with `scitex-clew`. New "Scope (read this first)" table makes explicit which concerns are owned by `scitex-clew` vs. consumed here.
 - README now states the M1 MVP loop end-to-end (clew claim data → render → static site with verified-claims sidebar + PDF.js + DAG).
