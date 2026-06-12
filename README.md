@@ -111,6 +111,11 @@ pip install scitex-live-paper[django]   # + Django app for scitex-hub mount
 pip install scitex-live-paper[mcp]      # + MCP server for agents
 ```
 
+> **Working on `scitex-live-paper` itself?** See
+> [Dev quickstart](docs/dev-quickstart.md) — editable install, render
+> the in-tree fixture bundle, bundle-layout contract, and where the
+> Django app pattern is mirrored from.
+
 ---
 
 ## Part of SciTeX
