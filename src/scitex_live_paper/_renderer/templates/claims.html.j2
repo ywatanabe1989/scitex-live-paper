@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ title|default('Live Paper — Claims') }}</title>
+<meta name="generator" content="scitex-live-paper">
+<link rel="stylesheet" href="{{ css_url }}">
+</head>
+<body class="live-paper">
+<header class="live-paper-header">
+  <h1 class="live-paper-title">{{ title|default('Live Paper — Claims') }}</h1>
+  <p class="live-paper-subtitle">{{ total_claims }} claim{{ '' if total_claims == 1 else 's' }} · status colours from <code>clew.VerificationStatus</code></p>
+</header>
+
+<main class="lp-claims-shell" data-viewer-url="{{ viewer_url }}">
+  {% if claims %}
+  <ol class="lp-claims-list" role="list">
+    {% for c in claims %}
+    <li class="lp-claim-row" data-claim-id="{{ c.claim_id }}" data-status="{{ c.status }}">
+      <button class="lp-claim-summary"
+              type="button"
+              aria-expanded="false"
+              aria-controls="panel-{{ loop.index }}">
+        <span class="lp-status-dot" data-status="{{ c.status }}" aria-hidden="true"></span>
+        <span class="lp-claim-label">{{ c.label }}</span>
+        <span class="lp-claim-type" aria-label="claim type">{{ c.claim_type }}</span>
+        <span class="lp-claim-status" aria-label="status">{{ c.status }}</span>
+      </button>
+
+      <section id="panel-{{ loop.index }}" class="lp-claim-panel" hidden>
+        <dl class="lp-claim-detail">
+          <dt>Claim id</dt><dd><code>{{ c.claim_id }}</code></dd>
+          <dt>Type</dt><dd>{{ c.claim_type }}</dd>
+          <dt>Status</dt><dd data-status="{{ c.status }}">{{ c.status }}</dd>
+          {% if c.claim_value %}<dt>Value</dt><dd class="lp-claim-value">{{ c.claim_value }}</dd>{% endif %}
+          <dt>File</dt><dd><code>{{ c.file_path }}{% if c.line_number is not none and c.line_number != '' %}:{{ c.line_number }}{% endif %}</code></dd>
+          {% if c.source_file %}<dt>Producing script</dt><dd><code>{{ c.source_file }}</code></dd>{% endif %}
+          {% if c.source_session %}<dt>Session</dt><dd><code>{{ c.source_session }}</code></dd>{% endif %}
+          {% if c.source_hash %}<dt>Hash</dt><dd><code>{{ c.source_hash }}</code></dd>{% endif %}
+          {% if c.registered_at %}<dt>Registered</dt><dd>{{ c.registered_at }}</dd>{% endif %}
+          {% if c.verified_at %}<dt>Verified</dt><dd>{{ c.verified_at }}</dd>{% endif %}
+        </dl>
+
+        <div class="lp-claim-actions">
+          <a class="lp-claim-jump"
+             href="{{ viewer_url }}#claim={{ c.claim_id }}"
+             title="Open this claim in the PDF viewer">Open in viewer</a>
+          <button class="lp-claim-reverify"
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="Coming in M2">Re-verify</button>
+        </div>
+      </section>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="lp-claims-empty">No claims found in this bundle.</p>
+  {% endif %}
+</main>
+
+<footer class="live-paper-footer">
+  <span>scitex-live-paper · claim model owned upstream by <code>scitex-clew</code></span>
+</footer>
+
+<script type="module" src="{{ js_url }}"></script>
+</body>
+</html>
