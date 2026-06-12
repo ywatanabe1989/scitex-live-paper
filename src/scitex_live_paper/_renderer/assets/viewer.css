@@ -1,0 +1,108 @@
+/* scitex-live-paper / M1 viewer CSS
+ *
+ * Status colours mirror scitex-clew's VerificationStatus semantics:
+ *   verified → green, stale → orange, failed → red, registered/default → neutral.
+ * When clew exposes a canonical mapping, source it from there instead of
+ * hard-coding here. See issue M1-3.
+ */
+
+:root {
+  --lp-bg: #fafbfc;
+  --lp-fg: #111;
+  --lp-muted: #555;
+  --lp-border: #d0d7de;
+  --lp-overlay-default: rgba(180, 180, 180, 0.35);
+  --lp-overlay-verified: rgba(46, 160, 67, 0.30);
+  --lp-overlay-stale:    rgba(219, 154, 4, 0.32);
+  --lp-overlay-failed:   rgba(207, 34, 46, 0.32);
+  --lp-overlay-border-verified: #2da44e;
+  --lp-overlay-border-stale:    #d29922;
+  --lp-overlay-border-failed:   #cf222e;
+  --lp-overlay-border-default:  #6e7781;
+}
+
+* { box-sizing: border-box; }
+
+body.live-paper {
+  margin: 0;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.live-paper-header,
+.live-paper-footer {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--lp-border);
+  background: #fff;
+}
+
+.live-paper-footer {
+  border-bottom: 0;
+  border-top: 1px solid var(--lp-border);
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+
+.live-paper-title { margin: 0; font-size: 18px; font-weight: 600; }
+.live-paper-subtitle { margin: 2px 0 0 0; font-size: 12px; color: var(--lp-muted); }
+
+.live-paper-viewer-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  gap: 24px;
+}
+
+.lp-page {
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  background: #fff;
+}
+
+.lp-page canvas {
+  display: block;
+}
+
+.lp-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* children re-enable */
+}
+
+.lp-claim-anchor {
+  position: absolute;
+  background: var(--lp-overlay-default);
+  border: 1.5px solid var(--lp-overlay-border-default);
+  border-radius: 3px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: outline-color 120ms ease, background 120ms ease;
+}
+
+.lp-claim-anchor.lp-status-verified {
+  background: var(--lp-overlay-verified);
+  border-color: var(--lp-overlay-border-verified);
+}
+.lp-claim-anchor.lp-status-stale {
+  background: var(--lp-overlay-stale);
+  border-color: var(--lp-overlay-border-stale);
+}
+.lp-claim-anchor.lp-status-failed {
+  background: var(--lp-overlay-failed);
+  border-color: var(--lp-overlay-border-failed);
+}
+
+.lp-claim-anchor:hover,
+.lp-claim-anchor:focus-visible {
+  outline: 2px solid #0969da;
+  outline-offset: 2px;
+}
+
+.lp-error {
+  color: var(--lp-overlay-border-failed);
+  padding: 12px 0;
+}

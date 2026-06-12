@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ title|default('Live Paper — Viewer') }}</title>
+<meta name="generator" content="scitex-live-paper">
+<link rel="stylesheet" href="{{ css_url }}">
+</head>
+<body class="live-paper">
+<header class="live-paper-header">
+  <h1 class="live-paper-title">{{ title|default('Live Paper') }}</h1>
+  <p class="live-paper-subtitle">PDF.js viewer · claim anchors overlay</p>
+</header>
+
+<main class="live-paper-viewer-shell">
+  <div id="live-paper-pdf-host"
+       data-pdf-url="{{ pdf_url }}"
+       data-claims-url="{{ claims_url }}"
+       data-pdfjs-url="{{ pdfjs_url }}"
+       data-pdfjs-worker-url="{{ pdfjs_worker_url }}"></div>
+</main>
+
+<footer class="live-paper-footer">
+  <span>scitex-live-paper · PDF.js v{{ pdfjs_version }} (vendored)</span>
+</footer>
+
+<script type="module" src="{{ js_url }}"></script>
+</body>
+</html>
