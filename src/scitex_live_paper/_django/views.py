@@ -63,26 +63,45 @@ def viewer_page(request) -> HttpResponse:
 
     - ``live_paper/viewer.html`` — full standalone page with header
       chrome (subtitle, scitex-clew boundary callout, status pre block).
-      Used by ``scitex-live-paper serve`` when the operator hits it
-      directly from a browser.
-    - ``live_paper/viewer_embed.html`` — minimal page with no chrome,
-      just the ``#live-paper-root`` div + assets. Used when host apps
-      (hub project view, writer preview, scholar) iframe the viewer
-      into their own page. Selected when ``?embed=1`` is on the URL.
+    - ``live_paper/viewer_embed.html`` — minimal page with no chrome.
+      Used when host apps iframe the viewer into their own chrome.
+
+    Embed shell is selected when ``?embed=1`` is on the URL **or** when
+    ``request.live_paper_context.options.embed_mode`` is True (PR #2's
+    ``mount(resolver=...)`` injection).
+
+    When ``request.live_paper_context`` is set:
+
+    - ``context.api_base`` overrides the default ``/api/`` prefix so
+      the SPA's fetch calls hit the host-mounted endpoint.
+    - ``context.options.embed_mode=True`` flips to the embed shell
+      even without ``?embed=1`` on the URL.
 
     Both variants carry ``data-api-base`` on the root element so the
     SPA boots identically; the embed shell additionally sets
-    ``data-embed-mode="1"`` so the JS can suppress any in-app chrome
-    a host doesn't want.
+    ``data-embed-mode="1"`` so the JS can suppress in-app chrome the
+    host doesn't want.
     """
+    context = getattr(request, "live_paper_context", None)
+    embed = _is_embed_mode(request) or (
+        context is not None and context.options.embed_mode
+    )
     template = (
-        "live_paper/viewer_embed.html"
-        if _is_embed_mode(request)
+        "live_paper/viewer_embed.html" if embed
         else "live_paper/viewer.html"
     )
+
+    if context is not None and context.api_base:
+        # Templates render ``/{{ api_base }}`` so api_base should be
+        # the post-leading-slash portion. Hosts often pass ``/foo/api/``
+        # — strip the leading slash so the template doesn't double it.
+        api_base = context.api_base.lstrip("/")
+    else:
+        api_base = "api/"
+
     html = render_to_string(
         template,
-        {"api_base": "api/"},
+        {"api_base": api_base},
         request=request,
     )
     return HttpResponse(html)

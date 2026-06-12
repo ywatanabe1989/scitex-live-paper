@@ -34,6 +34,31 @@ from .bundle import Bundle, BundleError, Claim
 
 __version__ = "0.1.0-alpha"
 
+
+def mount(resolver):
+    """Build URL patterns that inject a per-request :class:`BundleContext`.
+
+    Thin wrapper around :func:`scitex_live_paper._django._mount.mount`
+    — lazy-imports Django so consumers that only need the library
+    surface (``from scitex_live_paper import BundleContext, PaperState``)
+    don't pay the Django import cost. Requires the ``[django]`` extra.
+
+    Returns a 2-tuple ``(patterns, "live_paper")`` suitable for
+    ``django.urls.include()``::
+
+        from django.urls import include, path
+        from scitex_live_paper import mount
+
+        urlpatterns = [
+            path("apps/live-paper/<paper_id>/",
+                 include(mount(resolver=hub_resolver))),
+        ]
+    """
+    from ._django._mount import mount as _mount  # local: lazy import
+
+    return _mount(resolver)
+
+
 __all__ = [
     "__version__",
     # bundle model — owned upstream by scitex-clew, mirrored here
@@ -48,6 +73,8 @@ __all__ = [
     "PaperState",
     "RendererOptions",
     "RendererTheme",
+    # Django mount helper (lazy-imports Django on call)
+    "mount",
     # submodules — kept for back-compat
     "bundle",
     "dag",
