@@ -124,15 +124,109 @@ class PDFViewer {
     for (let pageNum = 1; pageNum <= this.pdfDoc.numPages; pageNum++) {
       const page = await this.pdfDoc.getPage(pageNum);
       const viewport = page.getViewport({ scale: renderScale });
+
+      // Per-page wrapper so the canvas + text overlay + annotation
+      // overlay share the same coordinate space. PDF.js's TextLayer
+      // and AnnotationLayer position absolutely relative to this
+      // wrapper.
+      const pageWrap = document.createElement("div");
+      pageWrap.className = "pdf-page";
+      pageWrap.style.position = "relative";
+      pageWrap.style.width = viewport.width + "px";
+      pageWrap.style.height = viewport.height + "px";
+      pageWrap.dataset.pageNumber = String(pageNum);
+
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       if (!ctx) continue;
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       canvas.className = "pdf-page-canvas";
-      this.container.appendChild(canvas);
+      pageWrap.appendChild(canvas);
+
+      this.container.appendChild(pageWrap);
       this.canvases.push(canvas);
+
       await page.render({ canvasContext: ctx, viewport }).promise;
+
+      // PR (c): text-layer for native browser Ctrl-F + text selection.
+      // page.getTextContent() returns positioned glyph runs; PDF.js's
+      // TextLayer class paints invisible spans aligned with the canvas
+      // so the browser's built-in find / select-and-copy work.
+      try {
+        await this._renderTextLayer(page, viewport, pageWrap);
+      } catch (err) {
+        console.warn("[pdf-viewer] text-layer page %d failed", pageNum, err);
+      }
+
+      // PR (c): annotation-layer for PDF-internal links + form fields.
+      try {
+        await this._renderAnnotationLayer(page, viewport, pageWrap);
+      } catch (err) {
+        console.warn("[pdf-viewer] annotation-layer page %d failed", pageNum, err);
+      }
+    }
+  }
+
+  async _renderTextLayer(page, viewport, pageWrap) {
+    const textContent = await page.getTextContent();
+    const textLayerDiv = document.createElement("div");
+    textLayerDiv.className = "textLayer";
+    textLayerDiv.style.position = "absolute";
+    textLayerDiv.style.top = "0";
+    textLayerDiv.style.left = "0";
+    textLayerDiv.style.width = viewport.width + "px";
+    textLayerDiv.style.height = viewport.height + "px";
+    pageWrap.appendChild(textLayerDiv);
+
+    // PDF.js exposes a TextLayer class in modern builds; older builds
+    // expose a renderTextLayer() helper. Probe and call whichever is
+    // available.
+    if (typeof this.pdfjs.TextLayer === "function") {
+      const layer = new this.pdfjs.TextLayer({
+        textContentSource: textContent,
+        container: textLayerDiv,
+        viewport: viewport,
+      });
+      await layer.render();
+    } else if (typeof this.pdfjs.renderTextLayer === "function") {
+      const task = this.pdfjs.renderTextLayer({
+        textContentSource: textContent,
+        container: textLayerDiv,
+        viewport: viewport,
+      });
+      await task.promise;
+    } else {
+      console.warn("[pdf-viewer] no TextLayer API in PDF.js — text selection/find disabled");
+    }
+  }
+
+  async _renderAnnotationLayer(page, viewport, pageWrap) {
+    const annotations = await page.getAnnotations();
+    if (!annotations || annotations.length === 0) return;
+
+    const annotationLayerDiv = document.createElement("div");
+    annotationLayerDiv.className = "annotationLayer";
+    annotationLayerDiv.style.position = "absolute";
+    annotationLayerDiv.style.top = "0";
+    annotationLayerDiv.style.left = "0";
+    annotationLayerDiv.style.width = viewport.width + "px";
+    annotationLayerDiv.style.height = viewport.height + "px";
+    pageWrap.appendChild(annotationLayerDiv);
+
+    if (typeof this.pdfjs.AnnotationLayer === "function") {
+      const layer = new this.pdfjs.AnnotationLayer({
+        div: annotationLayerDiv,
+        page: page,
+        viewport: viewport.clone({ dontFlip: true }),
+      });
+      layer.render({
+        annotations: annotations,
+        linkService: { externalLinkTarget: 2 /* BLANK */ },
+        renderForms: false,
+      });
+    } else {
+      console.warn("[pdf-viewer] no AnnotationLayer API in PDF.js — links/forms disabled");
     }
   }
 
