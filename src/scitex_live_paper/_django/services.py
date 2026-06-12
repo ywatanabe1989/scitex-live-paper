@@ -94,6 +94,43 @@ def get_bundle_state(
     return state
 
 
+def get_request_bundle_state(
+    request,
+    *,
+    ttl_seconds: float = DEFAULT_TTL_SECONDS,
+) -> BundleState:
+    """Return a :class:`BundleState` for the current request.
+
+    Resolution priority:
+
+    1. ``request.live_paper_context`` — set by
+       :func:`scitex_live_paper.mount` when a host app injects a
+       per-request :class:`~scitex_live_paper.BundleContext`. The
+       resolver owns its own caching (DB / S3 / multi-tenant lookup);
+       this function just loads the context's source.
+    2. Env-pinned ``SCITEX_LIVE_PAPER_BUNDLE`` — the standalone
+       single-tenant fallback used by ``scitex-live-paper serve`` and
+       legacy callers.
+
+    Handlers should call this rather than :func:`get_bundle_state`
+    directly, so a single handler works under both mount modes
+    without branching.
+    """
+    context = getattr(request, "live_paper_context", None)
+    if context is not None:
+        bundle = context.source.load()
+        # The BundleContext owns the cache lever — we don't cache here.
+        # The bundle's resolved root path stands in as ``bundle_path``
+        # so the existing ``BundleState`` surface stays uniform
+        # whichever mount mode is active.
+        return BundleState(
+            bundle_path=bundle.root,
+            bundle=bundle,
+            loaded_at=time.time(),
+        )
+    return get_bundle_state(ttl_seconds=ttl_seconds)
+
+
 def clear_cache() -> None:
     """Drop the in-process cache (used by tests)."""
     _cache.clear()

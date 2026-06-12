@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ..services import get_bundle_state
+from ..services import get_request_bundle_state
 
 
 def ping(request) -> Mapping[str, Any]:
@@ -39,7 +39,7 @@ def bundle_info(request) -> Mapping[str, Any]:
       ``pinned_commit``, ``show_verification_badge``,
       ``re_verify_enabled``. Drives the embed-mode SPA chrome.
     """
-    state = get_bundle_state()
+    state = get_request_bundle_state(request)
     bundle = state.bundle
     manuscript_name = (
         bundle.manuscript_path.name
