@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ title|default('Live Paper') }}</title>
+<meta name="generator" content="scitex-live-paper">
+<link rel="stylesheet" href="{{ css_url }}">
+</head>
+<body class="live-paper">
+<header class="live-paper-header">
+  <h1 class="live-paper-title">{{ title|default('Live Paper') }}</h1>
+  <p class="live-paper-subtitle">scitex-live-paper · static site · opens from file://</p>
+</header>
+
+<main class="lp-index-shell">
+  <nav class="lp-index-nav" aria-label="Live Paper sections">
+    <ul class="lp-index-list">
+      <li>
+        <a class="lp-index-card" href="{{ viewer_url }}">
+          <strong>Viewer</strong>
+          <span>PDF.js viewer with claim-anchor overlay</span>
+        </a>
+      </li>
+      <li>
+        <a class="lp-index-card" href="{{ claims_url }}">
+          <strong>Claims</strong>
+          <span>{{ total_claims }} claim{{ '' if total_claims == 1 else 's' }} · status palette from scitex-clew</span>
+        </a>
+      </li>
+      <li>
+        <a class="lp-index-card" href="{{ dag_url }}">
+          <strong>DAG</strong>
+          <span>Mermaid provenance graph · click-to-claim wiring</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <section class="lp-index-summary" aria-label="Bundle summary">
+    <dl class="lp-index-meta">
+      <dt>Manuscript</dt>
+      <dd><code>{{ manuscript_filename }}</code></dd>
+      <dt>Claims</dt>
+      <dd>{{ total_claims }}</dd>
+      <dt>DAG</dt>
+      <dd>{{ 'embedded' if has_dag else 'not present' }}</dd>
+      {% if schema_version %}
+      <dt>claims.json schema</dt>
+      <dd><code>{{ schema_version }}</code></dd>
+      {% endif %}
+    </dl>
+  </section>
+</main>
+
+<footer class="live-paper-footer">
+  <span>scitex-live-paper · M1 read-only renderer · claim model owned upstream by <code>scitex-clew</code></span>
+</footer>
+</body>
+</html>

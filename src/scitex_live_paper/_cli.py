@@ -1,0 +1,171 @@
+"""Command-line entry point for `scitex-live-paper` (issue #7).
+
+Exposes ``scitex-live-paper render <bundle> --out <site>`` — the M1
+end-to-end loop that takes an accepted manuscript bundle and emits a
+self-contained static site directory (viewer + claims + DAG + landing
+page + vendored assets). The generated site opens straight from
+``file://`` — no server required.
+
+The CLI is the thin glue layer: it loads the bundle and calls each
+sibling renderer in turn. All claim / DAG semantics live upstream in
+``scitex-clew``; this module never invents or validates fields.
+"""
+
+from __future__ import annotations
+
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+try:
+    import click
+except ImportError as exc:  # pragma: no cover - defensive
+    raise RuntimeError(
+        "scitex-live-paper CLI requires click — install the package "
+        "(or `pip install click>=8.0`)"
+    ) from exc
+
+from scitex_live_paper import bundle as bundle_module
+from scitex_live_paper._renderer.claims import render_claims_sidebar
+from scitex_live_paper._renderer.dag import render_dag
+from scitex_live_paper._renderer.index import render_index
+from scitex_live_paper._renderer.viewer import render_viewer
+
+__all__ = ["RenderResult", "render_site", "cli", "main"]
+
+
+@dataclass(frozen=True)
+class RenderResult:
+    """Resolved paths of the four pages the site emits.
+
+    The vendored asset paths are intentionally NOT part of the contract
+    — callers should look up ``out_dir / "assets" / ...`` if needed.
+    """
+
+    out_dir: Path
+    index_html: Path
+    viewer_html: Path
+    claims_html: Path
+    dag_html: Path
+
+
+def render_site(
+    bundle_path: str | Path,
+    out_dir: str | Path,
+    *,
+    title: str | None = None,
+) -> RenderResult:
+    """Render a bundle directory into a self-contained static site.
+
+    Parameters
+    ----------
+    bundle_path
+        Path to the accepted manuscript bundle directory (see
+        :mod:`scitex_live_paper.bundle` for the expected layout).
+    out_dir
+        Output directory. Created if absent. Existing pages are
+        overwritten — the render is idempotent.
+    title
+        Optional shared page title; defaults to ``"Live Paper"`` for the
+        landing page and ``"Live Paper — <surface>"`` for the others.
+
+    Returns
+    -------
+    RenderResult
+        Resolved paths of the four emitted pages.
+    """
+    loaded = bundle_module.load(bundle_path)
+    out_dir = Path(out_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    viewer = render_viewer(
+        loaded,
+        out_dir,
+        title=title or "Live Paper — Viewer",
+    )
+    claims = render_claims_sidebar(
+        loaded,
+        out_dir,
+        title=title or "Live Paper — Claims",
+    )
+    dag = render_dag(
+        loaded,
+        out_dir,
+        title=title or "Live Paper — DAG",
+    )
+    index = render_index(
+        loaded,
+        out_dir,
+        title=title,
+    )
+
+    return RenderResult(
+        out_dir=out_dir,
+        index_html=index.index_html,
+        viewer_html=viewer.viewer_html,
+        claims_html=claims.claims_html,
+        dag_html=dag.dag_html,
+    )
+
+
+@click.group(
+    context_settings={"help_option_names": ["-h", "--help"]},
+    help="scitex-live-paper — emit a static live-paper site from an accepted bundle.",
+)
+@click.version_option(
+    package_name="scitex-live-paper",
+    prog_name="scitex-live-paper",
+)
+def cli() -> None:
+    """Top-level ``scitex-live-paper`` group."""
+
+
+@cli.command("render")
+@click.argument(
+    "bundle_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
+)
+@click.option(
+    "--out",
+    "out_dir",
+    required=True,
+    type=click.Path(file_okay=False, dir_okay=True, resolve_path=True),
+    help="Output directory for the generated static site.",
+)
+@click.option(
+    "--title",
+    default=None,
+    help="Optional shared page title (defaults to 'Live Paper').",
+)
+def render_cmd(bundle_path: str, out_dir: str, title: str | None) -> None:
+    """Render BUNDLE_PATH into a self-contained static site under --out."""
+    try:
+        result = render_site(bundle_path, out_dir, title=title)
+    except bundle_module.BundleError as exc:
+        # Surface bundle-layout errors with a clean exit code (no traceback).
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"rendered → {result.out_dir}")
+    click.echo(f"  index    : {result.index_html.relative_to(result.out_dir)}")
+    click.echo(f"  viewer   : {result.viewer_html.relative_to(result.out_dir)}")
+    click.echo(f"  claims   : {result.claims_html.relative_to(result.out_dir)}")
+    click.echo(f"  dag      : {result.dag_html.relative_to(result.out_dir)}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Entrypoint used by the ``[project.scripts]`` declaration.
+
+    Returns the exit code so callers can ``sys.exit(main())`` cleanly.
+    """
+    try:
+        cli.main(args=argv, standalone_mode=False)
+    except click.ClickException as exc:
+        exc.show()
+        return exc.exit_code
+    except SystemExit as exc:
+        return int(exc.code) if exc.code is not None else 0
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover - exercised via console_scripts
+    sys.exit(main())

@@ -1,0 +1,108 @@
+/* scitex-live-paper / M1 landing page CSS
+ *
+ * Shared "live-paper" header/footer skin matches the viewer/claims/dag
+ * surfaces so navigating between pages is visually continuous.
+ */
+
+:root {
+  --lp-bg: #fafbfc;
+  --lp-fg: #111;
+  --lp-muted: #555;
+  --lp-border: #d0d7de;
+  --lp-card-bg: #fff;
+  --lp-card-hover: #f0f4f8;
+}
+
+* { box-sizing: border-box; }
+
+body.live-paper {
+  margin: 0;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.live-paper-header,
+.live-paper-footer {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--lp-border);
+  background: #fff;
+}
+
+.live-paper-footer {
+  border-bottom: 0;
+  border-top: 1px solid var(--lp-border);
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+
+.live-paper-title { margin: 0; font-size: 18px; font-weight: 600; }
+.live-paper-subtitle { margin: 2px 0 0 0; font-size: 12px; color: var(--lp-muted); }
+
+.lp-index-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: grid;
+  gap: 24px;
+}
+
+.lp-index-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.lp-index-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  background: var(--lp-card-bg);
+  border: 1px solid var(--lp-border);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--lp-fg);
+  transition: background 120ms ease;
+}
+
+.lp-index-card:hover {
+  background: var(--lp-card-hover);
+}
+
+.lp-index-card strong {
+  font-size: 15px;
+}
+
+.lp-index-card span {
+  color: var(--lp-muted);
+  font-size: 13px;
+}
+
+.lp-index-summary {
+  background: var(--lp-card-bg);
+  border: 1px solid var(--lp-border);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.lp-index-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.lp-index-meta dt {
+  font-weight: 600;
+  color: var(--lp-muted);
+}
+
+.lp-index-meta dd {
+  margin: 0;
+  word-break: break-all;
+}
