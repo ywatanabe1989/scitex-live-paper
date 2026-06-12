@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ title|default('Live Paper — DAG') }}</title>
+<meta name="generator" content="scitex-live-paper">
+<link rel="stylesheet" href="{{ css_url }}">
+</head>
+<body class="live-paper">
+<header class="live-paper-header">
+  <h1 class="live-paper-title">{{ title|default('Live Paper — DAG') }}</h1>
+  <p class="live-paper-subtitle">Clew provenance graph · mermaid v{{ mermaid_version }} (vendored)</p>
+</header>
+
+<main class="lp-dag-shell"
+      data-viewer-url="{{ viewer_url }}"
+      data-claims-url="{{ claims_url }}">
+
+  {% if has_dag %}
+  <pre class="mermaid" id="lp-dag-source">{{ dag_source }}</pre>
+  {% else %}
+  <p class="lp-dag-empty">No <code>dag.mmd</code> in this bundle.</p>
+  {% endif %}
+
+  <aside id="lp-dag-overlay" class="lp-dag-overlay" hidden aria-live="polite">
+    <button class="lp-dag-overlay-close" type="button" aria-label="Close overlay">×</button>
+    <h2 class="lp-dag-overlay-title">Node</h2>
+    <dl class="lp-dag-overlay-detail"></dl>
+  </aside>
+</main>
+
+<footer class="live-paper-footer">
+  <span>scitex-live-paper · DAG taxonomy owned upstream by <code>scitex-clew</code></span>
+</footer>
+
+<script id="lp-provenance-map" type="application/json">{{ provenance_map|tojson }}</script>
+<script src="{{ mermaid_url }}"></script>
+<script type="module" src="{{ js_url }}"></script>
+</body>
+</html>
