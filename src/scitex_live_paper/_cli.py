@@ -184,7 +184,12 @@ def serve_cmd(bundle_path: str, host: str, port: int) -> None:
             "the `serve` command requires the [django] extra — "
             "install with: pip install 'scitex-live-paper[django]'"
         ) from exc
-    _serve(bundle_path, host=host, port=port)
+    # pragma: no cover reason — `_serve(...)` is `_server.serve()`
+    # with no injected runner, which calls Django's `runserver` and
+    # binds a TCP port. No-mocks doctrine prohibits patching
+    # call_command for a coverage hit; this line only fires from the
+    # live `scitex-live-paper serve` CLI.
+    _serve(bundle_path, host=host, port=port)  # pragma: no cover
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -197,8 +202,13 @@ def main(argv: list[str] | None = None) -> int:
     except click.ClickException as exc:
         exc.show()
         return exc.exit_code
-    except SystemExit as exc:
-        return int(exc.code) if exc.code is not None else 0
+    except SystemExit as exc:  # pragma: no cover
+        # Defensive — click(standalone_mode=False) is supposed to
+        # surface UsageError + ClickException without `sys.exit()`,
+        # but plugins / hooks can raise SystemExit unrelated to click.
+        # When that happens (rare), preserve the exit code so the
+        # console-script returns the same value to the shell.
+        return int(exc.code) if exc.code is not None else 0  # pragma: no cover
     return 0
 
 
