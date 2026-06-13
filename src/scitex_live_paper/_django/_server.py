@@ -37,9 +37,15 @@ def _default_runner(*args: object, **kwargs: object) -> object:
     import is lazy: callers that don't reach ``serve()`` never pay the
     Django import cost.
     """
-    from django.core.management import call_command  # noqa: WPS433
+    # pragma: no cover reason — exercising this branch requires
+    # actually invoking ``call_command("runserver", ...)`` which binds
+    # a TCP port; no-mocks doctrine prohibits patching call_command
+    # for a coverage hit. `_server.serve` injects a real
+    # `_RunnerSpy` in every test (PR #20 surface) so this body only
+    # fires from the live `scitex-live-paper serve` CLI.
+    from django.core.management import call_command  # noqa: WPS433  # pragma: no cover
 
-    return call_command(*args, **kwargs)
+    return call_command(*args, **kwargs)  # pragma: no cover
 
 
 def serve(
