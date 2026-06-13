@@ -251,7 +251,11 @@ def test_re_review_badge_js_module_exists_and_exports():
 def test_viewer_js_orchestrator_imports_re_review_badge():
     text = _js_module("viewer.js")
     assert 'from "./re-review-badge.js"' in text
-    assert "renderReReviewBadge(rootEl, info)" in text
+    # After the dashboard-wire PR, the boot reads bundle from a
+    # variable (`bundleInfo`) populated by either dashboard or the
+    # fallback — match the call site without re-pinning the literal
+    # argument name.
+    assert "renderReReviewBadge(rootEl, " in text
 
 
 def test_re_review_badge_js_reads_payload_field():

@@ -17,6 +17,7 @@
 import {
   normalizeBase,
   fetchJson,
+  fetchOrNull,
   setStatus,
   ensurePdfContainer,
   renderError,
@@ -50,29 +51,48 @@ async function boot(rootEl) {
     return;
   }
 
-  // Boot RPCs — bundle-info populates the JSON pre block AND drives
-  // the M4 paper-level re-review badge (rendered above the claims
-  // sidebar when the host injected one).
+  // Boot RPCs — prefer the merged `dashboard` endpoint (one round-trip
+  // returning bundle-info + claims in one go). Falls back to the
+  // 3-call path if dashboard isn't served by the backend yet (so SPA
+  // bundles built after this PR keep working against develop snapshots
+  // that haven't picked up `api/dashboard`).
+  let bundleInfo = null;
+  let claimsPayload = null;
+
   try {
     const ping = await fetchJson(apiBase + "ping");
     if (!ping || ping.ok !== true) {
       throw new Error("ping returned non-ok: " + JSON.stringify(ping));
     }
-    const info = await fetchJson(apiBase + "bundle-info");
-    setStatus(info);
-    renderReReviewBadge(rootEl, info);
+
+    const dash = await fetchOrNull(apiBase + "dashboard");
+    if (dash && dash.bundle && dash.claims) {
+      bundleInfo = dash.bundle;
+      claimsPayload = dash.claims;
+    } else {
+      // Fallback: separate calls. Keeps old backends working + lets
+      // the SPA boot in environments where the dashboard endpoint
+      // isn't reachable (e.g. an early hub-side wrapper that hasn't
+      // re-deployed).
+      bundleInfo = await fetchJson(apiBase + "bundle-info");
+      claimsPayload = await fetchJson(apiBase + "claims");
+    }
+
+    setStatus(bundleInfo);
+    renderReReviewBadge(rootEl, bundleInfo);
   } catch (err) {
     console.error("[live-paper] boot RPCs failed", err);
     setStatus({ error: String(err) });
   }
 
-  // Claims sidebar — best-effort; if /api/claims fails the PDF viewer
-  // still mounts.
-  try {
-    const claimsPayload = await fetchJson(apiBase + "claims");
-    renderClaimsSidebar(rootEl, claimsPayload, apiBase);
-  } catch (err) {
-    console.warn("[live-paper] claims sidebar render failed", err);
+  // Claims sidebar — best-effort; if the claims payload didn't land
+  // (boot RPC raised), the PDF viewer still mounts.
+  if (claimsPayload) {
+    try {
+      renderClaimsSidebar(rootEl, claimsPayload, apiBase);
+    } catch (err) {
+      console.warn("[live-paper] claims sidebar render failed", err);
+    }
   }
 
   const pdfContainer = ensurePdfContainer(rootEl);
