@@ -39,6 +39,13 @@ scitex-live-paper render --help
 
 …all work after the editable install.
 
+### Want to exercise M2 (live re-verify)?
+
+See [`docs/dev/m2-reverify-runbook.md`](dev/m2-reverify-runbook.md)
+for the full operator-facing trace: install matrix, all four M2
+HTTP surfaces, the `re_verify_enabled` SPA gate, the
+graceful-degradation cheatsheet, and hub-mount notes.
+
 ## 2. Render the fixture bundle
 
 A minimal accepted-manuscript bundle lives in-tree at
