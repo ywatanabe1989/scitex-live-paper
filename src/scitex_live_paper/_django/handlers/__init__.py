@@ -5,6 +5,7 @@ The ``HANDLERS`` mapping is the *single source of truth* for what the
 
 - ``api/ping``         — liveness probe
 - ``api/bundle-info``  — bundle summary + paper_state
+- ``api/claims``       — full claim list + re_verify_enabled flag (SPA sidebar)
 - ``api/pdf``          — bundle manuscript PDF bytes (ported from
                          ``scitex_writer/_django/handlers/compile.py:handle_pdf``;
                          see ``docs/research/writer-pdf-viewer-findings.md``)
@@ -20,6 +21,7 @@ from __future__ import annotations
 
 from typing import Callable, Dict
 
+from .claims import handle_claims
 from .core import bundle_info, ping
 from .pdf import handle_pdf
 from .reverify import handle_reverify
@@ -30,9 +32,17 @@ HandlerFn = Callable[..., object]
 HANDLERS: Dict[str, HandlerFn] = {
     "api/ping":          ping,
     "api/bundle-info":   bundle_info,
+    "api/claims":        handle_claims,
     "api/pdf":           handle_pdf,
     "api/claim/verify":  handle_reverify,
 }
 # fmt: on
 
-__all__ = ["HANDLERS", "ping", "bundle_info", "handle_pdf", "handle_reverify"]
+__all__ = [
+    "HANDLERS",
+    "ping",
+    "bundle_info",
+    "handle_claims",
+    "handle_pdf",
+    "handle_reverify",
+]
