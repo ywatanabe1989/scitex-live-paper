@@ -1,11 +1,13 @@
 """Views for the live-paper Django app.
 
-Two surfaces:
+Three surfaces:
 
 - ``viewer_page`` — renders the SPA shell template with a ``data-api-base``
   attribute the frontend reads at boot.
 - ``api_dispatch`` — single catch-all that looks the ``endpoint`` up in
   the ``HANDLERS`` registry. Unknown endpoints → JSON 404.
+- ``doi_landing`` — M5 foundational slice. Render the viewer when the
+  pinned bundle's ``paper_state.doi`` matches the URL DOI, else 404.
 
 Handlers take ``(request)`` and return a JSON-serialisable mapping, which
 this dispatcher wraps in a ``JsonResponse``. The bundle they read is
@@ -22,10 +24,16 @@ import json
 import logging
 from typing import Any, Callable, Mapping
 
-from django.http import HttpResponse, HttpResponseBase, JsonResponse
+from django.http import (
+    HttpResponse,
+    HttpResponseBase,
+    HttpResponseNotFound,
+    JsonResponse,
+)
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 
+from . import services
 from .handlers import HANDLERS
 
 logger = logging.getLogger(__name__)
@@ -142,6 +150,55 @@ def api_dispatch(request, endpoint: str) -> HttpResponse:
     except Exception as exc:
         logger.exception("[live-paper] handler %s raised", endpoint)
         return JsonResponse({"error": str(exc)}, status=500)
+
+
+def doi_landing(request, doi: str) -> HttpResponse:
+    """Render the viewer if the request's bundle is pinned to ``doi``.
+
+    **M5 foundational slice** — canonical DOI-keyed URL surface. The
+    route is ``doi/<path:doi>/`` so a DOI like ``10.1000/foo.bar/v2``
+    (suffix with slashes — perfectly legal per the DOI handbook)
+    matches without manual URL escaping.
+
+    Resolution priority (delegates to
+    :func:`services.get_request_bundle_state`):
+
+    1. ``request.live_paper_context`` (mount path) — host's resolver
+       owns DOI routing decisions; this view just renders the bundle
+       the resolver returned.
+    2. Env-pinned ``SCITEX_LIVE_PAPER_BUNDLE`` (standalone path).
+
+    Comparison: ``state.bundle.paper_state.doi == doi`` (exact match).
+    DOI case-sensitivity follows the DOI handbook's case-preserving
+    rule for the foundational slice; richer resolution (case-folding,
+    prefix normalisation, CrossRef lookup) is deferred until operator
+    confirms M5 shape.
+
+    Non-matching DOI → 404 with a short body naming the requested
+    DOI. Missing bundle → 404 with the same body shape (no traceback
+    leak; the "we couldn't find a bundle for this DOI" answer is the
+    same regardless of why).
+
+    On match: delegates to :func:`viewer_page` so the rendered HTML
+    is byte-identical to a direct ``/`` viewer hit. That means the
+    SPA boot, ``?embed=1`` switch, ``data-api-base`` attribute and
+    ``BundleContext`` plumbing all work unchanged — the DOI URL is
+    purely an alternate entry point.
+    """
+    try:
+        state = services.get_request_bundle_state(request)
+    except RuntimeError:
+        # No env-pinned bundle and no mount context — give the same
+        # 404 answer as a DOI mismatch. The operator-facing message
+        # is intentionally the same so we don't leak whether ANY
+        # bundle is configured at this server vs whether THIS DOI is.
+        return HttpResponseNotFound(f"no bundle pinned to DOI {doi!r}")
+
+    pinned_doi = state.bundle.paper_state.doi
+    if pinned_doi != doi:
+        return HttpResponseNotFound(f"no bundle pinned to DOI {doi!r}")
+
+    return viewer_page(request)
 
 
 def _read_body_json(request) -> Mapping[str, Any]:
