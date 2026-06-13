@@ -23,11 +23,20 @@ import pytest
 
 
 def _viewer_js() -> str:
+    """Concatenated text of every JS module under live_paper/js/."""
     import scitex_live_paper
 
     pkg_root = Path(scitex_live_paper.__file__).resolve().parent
-    return (pkg_root / "_django/static/live_paper/js/viewer.js").read_text(
-        encoding="utf-8",
+    js_dir = pkg_root / "_django/static/live_paper/js"
+    return "\n".join(
+        (js_dir / name).read_text(encoding="utf-8")
+        for name in (
+            "viewer.js",
+            "pdf-viewer.js",
+            "claims-sidebar.js",
+            "reverify-all.js",
+            "_utils.js",
+        )
     )
 
 

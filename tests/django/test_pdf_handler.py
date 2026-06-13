@@ -216,21 +216,37 @@ def test_embed_template_loads_viewer_js_as_module(client, env_snapshot):
 # ──────────────────────────────────────────────────────────────────
 
 
-def _viewer_js_path() -> Path:
-    """Locate the ported viewer.js inside the installed package."""
+def _viewer_js_bundle() -> str:
+    """Concatenated text of every JS module under live_paper/js/.
+
+    After the module split, viewer logic lives in viewer.js
+    (orchestrator) + pdf-viewer.js + claims-sidebar.js +
+    reverify-all.js + _utils.js. Tests read the bundle so the
+    string-presence assertions stay terse.
+    """
     import scitex_live_paper
 
     pkg_root = Path(scitex_live_paper.__file__).resolve().parent
-    return pkg_root / "_django" / "static" / "live_paper" / "js" / "viewer.js"
+    js_dir = pkg_root / "_django" / "static" / "live_paper" / "js"
+    return "\n".join(
+        (js_dir / name).read_text(encoding="utf-8")
+        for name in (
+            "viewer.js",
+            "pdf-viewer.js",
+            "claims-sidebar.js",
+            "reverify-all.js",
+            "_utils.js",
+        )
+    )
 
 
 def test_viewer_js_defines_pdfviewer_class():
-    text = _viewer_js_path().read_text(encoding="utf-8")
+    text = _viewer_js_bundle()
     assert "class PDFViewer" in text
 
 
 def test_viewer_js_uses_vendored_pdfjs_not_cdn():
-    text = _viewer_js_path().read_text(encoding="utf-8")
+    text = _viewer_js_bundle()
     # Vendored relative import — same vendoring contract as PR #19.
     assert "pdf.min.mjs" in text
     for marker in ("cdn.jsdelivr.net", "unpkg.com", "cdnjs.cloudflare.com"):
@@ -238,7 +254,7 @@ def test_viewer_js_uses_vendored_pdfjs_not_cdn():
 
 
 def test_viewer_js_calls_api_pdf_endpoint():
-    text = _viewer_js_path().read_text(encoding="utf-8")
+    text = _viewer_js_bundle()
     # PDFViewer.load() builds the URL via apiBase + "pdf?doc_type=...".
     assert "\"pdf?doc_type=\"" in text
 
