@@ -13,6 +13,20 @@ export async function fetchJson(url) {
   return res.json();
 }
 
+export async function fetchOrNull(url) {
+  // Soft fetch — returns the parsed body on 2xx, returns null on any
+  // non-OK status or a network error. Used for opportunistic boot
+  // endpoints (e.g. `api/dashboard`) where the caller wants to fall
+  // back to a slower path rather than fail the whole boot.
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_err) {
+    return null;
+  }
+}
+
 export function setStatus(payload) {
   const pre = document.getElementById("live-paper-bundle-info");
   if (pre) {
