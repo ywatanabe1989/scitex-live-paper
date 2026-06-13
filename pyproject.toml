@@ -48,6 +48,14 @@ django = [
 mcp = [
     "fastmcp>=2.0",
 ]
+# scitex-clew owns the claim model + the live `verify_claim()` operation.
+# Without this extra, the M2 `api/claim/verify` (and `api/claims/verify`)
+# endpoints degrade gracefully to `fallback: true` per-result so the SPA
+# badge stays meaningful — but the operator never gets a real verify.
+# Install with: `pip install scitex-live-paper[clew]`.
+clew = [
+    "scitex-clew>=0.1.0",
+]
 test = [
     "pytest>=8.0",
 ]

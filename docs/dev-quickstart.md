@@ -24,6 +24,9 @@ cd scitex-live-paper
 git switch develop
 python -m venv .venv && source .venv/bin/activate
 pip install -e '.[test]'
+# To exercise the M2 live re-verify path end-to-end, also pull
+# scitex-clew (the upstream owner of `verify_claim()`):
+# pip install -e '.[test,django,clew]'
 ```
 
 The `[project.scripts]` entry registers a console script, so:

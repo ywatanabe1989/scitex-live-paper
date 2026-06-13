@@ -108,8 +108,14 @@ Issues for M1 are filed in this repo — see [open issues](https://github.com/yw
 ```bash
 pip install scitex-live-paper           # CLI + library
 pip install scitex-live-paper[django]   # + Django app for scitex-hub mount
+pip install scitex-live-paper[clew]     # + scitex-clew for live re-verify (M2)
 pip install scitex-live-paper[mcp]      # + MCP server for agents
 ```
+
+Without `[clew]` the M2 `api/claim/verify` and `api/claims/verify`
+endpoints stay reachable but degrade gracefully (every per-claim
+response carries ``fallback: true`` + a clear reason); install
+`[clew]` to get the real `verify_claim()` call.
 
 > **Working on `scitex-live-paper` itself?** See
 > [Dev quickstart](docs/dev-quickstart.md) — editable install, render
