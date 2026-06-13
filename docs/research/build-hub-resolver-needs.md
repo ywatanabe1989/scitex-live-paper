@@ -1,10 +1,16 @@
-# `build_hub_resolver` — needs map (read-only pre-work)
+# `build_hub_resolver` — needs map (read-only)
 
-**Status:** scoping doc. **No code, no shape commitments.** Implementation
-is **HELD** pending the operator's M4 path-B a/b decision (F0+F1 vs F3).
-This doc maps what a future `build_hub_resolver` factory would need to
-do, so the implementation PR doesn't start from a blank page once the
-a/b is picked.
+**Status:** living needs-map. Updated 2026-06-14 with operator's a/b
+ruling (F0+F1) and the corrected factory-location attribution
+(adapter lives in `scitex-agentic-journal`, NOT in hub — confirmed by
+proj-scitex-hub msg `b450c456`, 2026-06-14).
+
+This doc maps what each consumer of `mount(resolver=...)` needs.
+**No code, no shape commitments on the factory side** — the factory
+itself is owned by `scitex-agentic-journal`
+(`_hub_app_publisher/_resolver_adapter.py`, PR #34); this doc
+captures what hub / scholar / writer pass *into* a resolver and what
+live-paper-side surface keeps the contract consumable.
 
 ---
 
@@ -21,11 +27,23 @@ host repeats:
 4. Compute `api_base` from the request path.
 5. Compose `RendererOptions` (`embed_mode` for iframe hosts).
 
-`build_hub_resolver(...)` would be a factory that lives in `scitex-hub`
-(NOT in live-paper — live-paper owns the resolver SHAPE; hub owns
-the resolver CONTENT). The factory takes hub-internal helpers
-(project-lookup, bundle-lookup, paper-state-from-DB) and returns a
-`BundleResolver` ready to hand to `live_paper.mount(...)`.
+`build_hub_resolver(...)` is a factory that lives in
+`scitex-agentic-journal` (NOT in live-paper, NOT in hub —
+live-paper owns the resolver SHAPE; the
+**resolver-injection ADAPTER lives in `scitex-agentic-journal`** —
+their `_hub_app_publisher/_resolver_adapter.py`, landed in
+agentic-journal PR #34. Hub itself does NOT own
+`build_hub_resolver` — confirmed by proj-scitex-hub msg `b450c456`,
+2026-06-14).
+
+Journal owns the adapter because it's the package with re-review-badge
+knowledge — the factory needs to thread `ReReviewBadge` through the
+`BundleContext`, and journal is the producer of that data. Hub
+consumes the resolver but doesn't construct it.
+
+The factory takes journal-internal helpers (paper-lookup callable,
+re-review-state-from-DB, etc.) and returns a `BundleResolver` ready
+to hand to `live_paper.mount(...)`.
 
 The win: the wrapper app (`scitex_live_paper_hub_app`) stops carrying
 boilerplate; new hub mounts get a one-liner.
@@ -50,11 +68,21 @@ From `src/scitex_live_paper/_django/_mount.py`:
     `api/bundle-info` etc.
   - `options: RendererOptions` — display-time knobs (title, embed_mode,
     theme).
-- **Side-effect contract**: not formally pinned. Today the resolver
-  runs per-request synchronously inside the view wrapper. It may do
-  IO (DB lookup, bundle resolution) but should not raise generic
-  exceptions — hub-side will want a clean 404 path for "paper not
-  found", not a 500.
+- **Side-effect contract**: pinned by PR #47 (commit 26e0761).
+  Per-request synchronous invocation inside the view wrapper. May do
+  IO (DB lookup, bundle resolution). Errors flow through the
+  documented exception hierarchy:
+
+  | Exception | Status |
+  |---|---|
+  | `BundleNotFound` | 404 |
+  | `BundleAccessDenied` | 403 |
+  | `BundleResolverError` (base) | 500 |
+
+  Non-`BundleResolverError` exceptions propagate (Django default 500).
+  All three classes are importable top-level (`from scitex_live_paper import
+  BundleNotFound, BundleAccessDenied, BundleResolverError`). Full
+  contract documented in `_mount.py`'s module docstring.
 
 ---
 
@@ -95,64 +123,90 @@ From `src/scitex_live_paper/_django/_mount.py`:
 
 ## Where the factory lives
 
-NOT here. live-paper publishes the resolver SHAPE; hub publishes the
-factory that produces a resolver. The factory imports live-paper's
-public types, so the dependency edge is hub → live-paper (already true).
+NOT here. live-paper publishes the resolver SHAPE
+(`BundleResolver = Callable[..., BundleContext]`) and the resolver
+ERROR HIERARCHY (`BundleResolverError` / `BundleNotFound` /
+`BundleAccessDenied`, locked by PR #47); **`scitex-agentic-journal`
+publishes the factory** (`_hub_app_publisher/_resolver_adapter.py`,
+PR #34). Hub consumes both: it imports live-paper's public types
+for the mount surface and imports journal's adapter to construct the
+resolver. Dependency edges: `hub → live-paper`, `hub → journal`,
+`journal → live-paper` (all forward-only, no cycles).
 
 A live-paper-side helper (`build_resolver(...)` or similar) is NOT
 needed: every host's resolver is too host-specific (auth, project
-scope, storage layout) to share code with the others. The
-common shape is already captured by `BundleContext` itself.
+scope, storage layout) to share code with the others. The common
+shape is already captured by `BundleContext` itself. Journal's
+adapter is the reusable piece because it threads `ReReviewBadge`
+through — and journal owns `ReReviewBadge`.
 
 ---
 
-## Open questions waiting on operator a/b
+## M4 path-B a/b — RESOLVED (operator picked F0+F1, 2026-06-14)
 
-The M4 path-B a/b decision (F0+F1 vs F3) changes:
+Operator picked **F0+F1** (URL routing for published apps via
+`scitex_hub.apps` + `scitex_hub.app_config` entry points). Locked
+implications:
 
-- **F0+F1 path**: hub registers wrapper apps via the existing entry
-  points contract (`scitex_hub.apps` / `scitex_hub.app_config`).
-  `build_hub_resolver` would live in the wrapper module
-  (`scitex_live_paper_hub_app.resolver`) and ship as wrapper code. The
-  factory needs no new live-paper surface — just consumes the public
-  types live-paper already exports.
-- **F3 path**: hub introduces a different plugin contract (TBD shape
-  per the operator's choice). `build_hub_resolver` may need to be
-  re-shaped to match F3's calling convention. Could affect the
-  factory's signature, but NOT `BundleResolver` itself — `mount(...)`'s
-  contract is independent of how the wrapper is registered.
-
-Either way, live-paper's `mount(resolver=...)` and the public types
-(`BundleContext`, `BundleSource`, `PaperState`, `RendererOptions`) do
-not need to change. The a/b only affects WHERE the factory lives and
-how it's discovered.
+- Hub registers wrapper apps via the entry-points contract that
+  PR #44 already ships (`scitex_hub.apps = <module>.urls:urlpatterns`,
+  `scitex_hub.app_config = <module>.apps:<AppConfig>`).
+- `build_hub_resolver` lives in `scitex-agentic-journal`'s
+  `_hub_app_publisher/_resolver_adapter.py` (PR #34) and consumes
+  the public types live-paper already exports. **No new live-paper
+  surface needed** for the factory itself.
+- live-paper's contributions to F0+F1 (this workstream): the
+  resolver SHAPE + error hierarchy (PR #47, locked). Done.
+- Next slice for live-paper is the **types-completeness audit** —
+  any gap journal's adapter or hub's dispatcher needs from the
+  public surface that isn't shipped yet — and **M5 DOI-landing**
+  (deferred per lead msg `6a9b46a1` until M4 lands).
 
 ---
 
 ## What this doc deliberately does NOT do
 
-- ❌ Propose a `build_hub_resolver` signature (operator a/b first).
+- ❌ Propose a `build_hub_resolver` signature — that's owned by
+  `scitex-agentic-journal` (already shipped in their PR #34's
+  `_resolver_adapter.py`).
 - ❌ Propose a live-paper-side `build_resolver` helper (likely not
-  warranted — see "Where the factory lives" above).
-- ❌ Touch `_mount.py` or any other code.
+  warranted — see "Where the factory lives" above; journal's adapter
+  is the reusable piece).
+- ❌ Touch `_django/_mount.py` further (PR #47 landed the contract
+  pin; future shape changes would go through their own PR).
 - ❌ Pre-spec storage layout, paper-id format, auth scheme — those
-  belong in hub's design doc.
+  belong in hub's / journal's design docs.
 
-The deliverable here is: when the operator picks a/b and lead unblocks
-the workstream, the `build_hub_resolver` PR description writes itself
-from this doc + the a/b ruling.
+What live-paper IS still on the hook for (deferred until the operator
+greenlights M5, per lead msg `6a9b46a1`):
+
+- Types-completeness audit (#2 on lead's list) — any gap journal's
+  adapter or hub's dispatcher actually trips on at integration
+  time.
+- M5 DOI-landing (canonical `/doi/<doi>/` URL surface as the first
+  slice, per lead's recommendation).
 
 ---
 
 ## Cross-references
 
-- Implementation: `src/scitex_live_paper/_django/_mount.py` — current
-  `mount(resolver=...)` contract.
-- Public types: `src/scitex_live_paper/_types.py` — `BundleContext`,
-  `BundleSource`, `PaperState`, `RendererOptions`.
-- Backlog ticket: `live-paper-absorb-writer-pdf-viewer-d-adopt`
-  (in `.scitex/todo/tasks.yaml`) — the user-visible workstream this
-  feeds into.
-- Coordinated agents: proj-scitex-hub (msg `1f2606e8` —
-  `build_hub_resolver` deferral noted), proj-scitex-agentic-journal
-  (PR #34 / #35 / #37 cross-package parity).
+- live-paper implementation:
+  - `src/scitex_live_paper/_django/_mount.py` — `mount(resolver=...)`
+    contract + view-wrapper exception translation (locked PR #47).
+  - `src/scitex_live_paper/_types.py` — public types
+    (`BundleContext`, `BundleSource`, `PaperState`, `RendererOptions`,
+    `BundleResolverError` + subclasses).
+- Factory implementation (NOT here):
+  - `scitex_agentic_journal/_hub_app_publisher/_resolver_adapter.py`
+    (their PR #34). This is where `build_hub_resolver` lives.
+- Hub consumer:
+  - `scitex_hub`'s `urls_user_apps` dispatcher (F0+F1, in flight)
+    consumes the live-paper mount + journal's adapter.
+- Backlog ticket: `live-paper-build-hub-resolver` (in
+  `.scitex/todo/tasks.yaml`) — live-paper-side coordination + audit
+  tasks for this workstream.
+- Coordinating agents:
+  - proj-scitex-hub (msgs `1f2606e8`, `b450c456` — non-ownership
+    confirmation + exception-hierarchy spec).
+  - proj-scitex-agentic-journal (PRs #34 / #35 / #37 / #38 —
+    cross-package parity + factory ownership).
