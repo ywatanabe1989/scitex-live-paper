@@ -47,6 +47,15 @@ def bundle_info(request) -> Mapping[str, Any]:
         else None
     )
     ps = bundle.paper_state
+
+    # M4: paper-level re-review badge — surfaced when a host has
+    # injected a `BundleContext.re_review_badge` via
+    # `mount(resolver=...)`. The badge itself is authored by
+    # `scitex-agentic-journal`; this package just transports it through
+    # to the SPA. Absent → field is null + SPA hides the badge entirely.
+    context = getattr(request, "live_paper_context", None)
+    re_review_badge = getattr(context, "re_review_badge", None) if context else None
+
     return {
         "claim_count": state.claim_count,
         "schema": bundle.schema_version,
@@ -63,4 +72,15 @@ def bundle_info(request) -> Mapping[str, Any]:
             "show_verification_badge": ps.show_verification_badge,
             "re_verify_enabled": ps.re_verify_enabled,
         },
+        "re_review_badge": (
+            {
+                "status": re_review_badge.status,
+                "last_reviewed_at": re_review_badge.last_reviewed_at,
+                "reviewer": re_review_badge.reviewer,
+                "log_url": re_review_badge.log_url,
+                "notes": re_review_badge.notes,
+            }
+            if re_review_badge is not None
+            else None
+        ),
     }

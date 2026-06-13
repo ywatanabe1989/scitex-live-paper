@@ -43,6 +43,8 @@ __all__ = [
     "BundleSource",
     "BundleContext",
     "RendererOptions",
+    "ReReviewStatus",
+    "ReReviewBadge",
 ]
 
 
@@ -234,6 +236,10 @@ class BundleContext:
     paper_state: PaperState = field(default_factory=PaperState)
     api_base: str = "/api/"
     options: "RendererOptions" = field(default=None)  # type: ignore[assignment]
+    #: M4 paper-level re-review verdict — fed by
+    #: ``scitex-agentic-journal`` at mount time and surfaced through
+    #: ``bundle-info`` to the SPA. ``None`` → SPA hides the badge.
+    re_review_badge: Optional["ReReviewBadge"] = None
 
     def __post_init__(self) -> None:
         # ``RendererOptions`` carries renderer-display knobs; default to
@@ -245,6 +251,62 @@ class BundleContext:
     def load_bundle(self) -> "Bundle":
         """Materialise the underlying :class:`Bundle` (calls :meth:`source.load`)."""
         return self.source.load()
+
+
+# ──────────────────────────────────────────────────────────────────
+# ReReviewBadge — M4 paper-level re-review status (from agentic-journal)
+# ──────────────────────────────────────────────────────────────────
+
+
+#: The four lifecycle stages the paper-level re-review badge flexes for.
+#: Authored by ``scitex-agentic-journal`` (post-review verdict) and
+#: handed in via :class:`BundleContext.re_review_badge`. Distinct from
+#: the *per-claim* status (owned by ``scitex-clew``).
+ReReviewStatus = Literal[
+    "verified",       # green — agentic re-review found no issues
+    "concerns",       # amber — re-review flagged caveats / weaknesses
+    "contradicted",   # red — re-review contradicted at least one claim
+    "stale",          # grey — no recent re-review (default until first run)
+]
+
+
+@dataclass(frozen=True)
+class ReReviewBadge:
+    """Paper-level re-review verdict fed by ``scitex-agentic-journal``.
+
+    Distinct from :class:`PaperState` (lifecycle stage owned by this
+    package's render-time metadata) and from each claim's per-status
+    verification chip (owned upstream by ``scitex-clew``). This badge
+    summarises the agentic re-review pass *at the paper level* — a
+    single rolled-up verdict the operator sees above the claims sidebar.
+
+    Hosts inject the badge per-request via
+    :attr:`BundleContext.re_review_badge`. Absent → the SPA hides the
+    badge entirely (no implicit "stale" rendering — drafts and
+    pre-acceptance papers don't need a re-review summary).
+
+    Attributes
+    ----------
+    status
+        One of :data:`ReReviewStatus`.
+    last_reviewed_at
+        ISO-8601 UTC timestamp of the most recent re-review pass.
+    reviewer
+        Free-form identifier for who ran the pass — an agent name
+        (``"agentic-journal-v3"``) or a human reviewer id.
+    log_url
+        Optional link to the agentic-journal re-review log entry so
+        the operator can click through for the full transcript.
+    notes
+        Optional short operator-facing note (typically a one-line
+        summary of the verdict).
+    """
+
+    status: ReReviewStatus
+    last_reviewed_at: Optional[str] = None
+    reviewer: Optional[str] = None
+    log_url: Optional[str] = None
+    notes: Optional[str] = None
 
 
 # ──────────────────────────────────────────────────────────────────
