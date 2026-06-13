@@ -1,16 +1,17 @@
-"""``api/claim/verify`` — M2 re-verify endpoint.
+"""M2 re-verify endpoints — single (``api/claim/verify``) + bulk (``api/claims/verify``).
 
-Calls ``scitex_clew.verify_claim()`` against the bundle's pinned
-commit and returns the resulting :class:`~scitex_clew.VerificationStatus`.
-This is the first M2 surface — M1 is the read-only renderer; M2 is the
-live re-verify button. The verification badge UI (PR #26) is already
-wired against `re_verify_enabled`; this handler is the backend it calls.
+Both call ``scitex_clew.verify_claim()`` against the bundle's pinned
+commit and return the resulting :class:`~scitex_clew.VerificationStatus`.
 
 Boundary unchanged: ``scitex-clew`` owns the claim model + the verify
-operation. This handler is a thin pass-through. When ``scitex-clew``
+operation. These handlers are thin pass-throughs. When ``scitex-clew``
 is not installed the response degrades gracefully — the operator's
 SPA button surfaces a clear "not available" status rather than a 500,
 so the badge stays meaningful even on a base install.
+
+The bulk endpoint shares the same fallback / error envelope per
+result, so the SPA's "Re-verify all" button can stream per-claim
+status updates as the response comes back.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from __future__ import annotations
 import json
 import logging
 from importlib import import_module
-from typing import Any, Mapping, Optional
+from typing import Any, List, Mapping, Optional
 
 from django.http import HttpResponse, JsonResponse
 
@@ -26,7 +27,7 @@ from ..services import get_request_bundle_state
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["handle_reverify"]
+__all__ = ["handle_reverify", "handle_reverify_all"]
 
 
 def handle_reverify(request) -> HttpResponse:
@@ -215,3 +216,188 @@ def _normalize_result(
             if k not in {"status", "verified_at"}
         },
     }
+
+
+# ──────────────────────────────────────────────────────────────────
+# Bulk: ``api/claims/verify``
+# ──────────────────────────────────────────────────────────────────
+
+
+def handle_reverify_all(request) -> HttpResponse:
+    """Re-verify every claim in the bundle (or a subset).
+
+    Request
+    -------
+    ``POST /api/claims/verify``
+    Body (JSON; all keys optional)::
+
+        {
+            "claim_ids":     ["claim_a", "claim_b", ...]   # filter; omit = all
+            "pinned_commit": "<sha>"                       # override for all
+        }
+
+    Response
+    --------
+    ::
+
+        {
+            "ok": true | false,
+            "verified_against": "<sha>",
+            "count": <int>,                  # number of results below
+            "results": [
+                { ...same envelope as api/claim/verify... },
+                ...
+            ]
+        }
+
+    Top-level ``ok`` is True iff EVERY per-claim result succeeded
+    (``result.ok == true``). One fallback or error result flips it to
+    False so the SPA can flag the overall sweep as incomplete.
+
+    Errors:
+
+    - Non-POST → 405
+    - Body present but not a JSON object → 400
+    - ``claim_ids`` present but not a list of strings → 400
+    - No pinned_commit anywhere → 400
+    - No claims to verify (filter empty after intersection with bundle) → 400
+
+    Per-claim failures (clew raise / unknown claim_id) are folded into
+    the per-result envelope with ``ok=false`` — they do NOT 500 the
+    bulk call, so a single bad claim doesn't kill the sweep.
+    """
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "method not allowed; POST a JSON body"},
+            status=405,
+        )
+
+    body = _parse_json_body(request)
+    if body is None:
+        body = {}
+    if not isinstance(body, dict):
+        return JsonResponse(
+            {"error": "request body must be a JSON object"},
+            status=400,
+        )
+
+    claim_ids_raw = body.get("claim_ids")
+    claim_ids_filter: Optional[List[str]]
+    if claim_ids_raw is None:
+        claim_ids_filter = None
+    elif isinstance(claim_ids_raw, list) and all(
+        isinstance(x, str) and x.strip() for x in claim_ids_raw
+    ):
+        claim_ids_filter = list(claim_ids_raw)
+    else:
+        return JsonResponse(
+            {"error": "'claim_ids' must be a list of non-empty strings"},
+            status=400,
+        )
+
+    state = get_request_bundle_state(request)
+    bundle = state.bundle
+
+    pinned_commit: Optional[str] = body.get("pinned_commit")
+    if not isinstance(pinned_commit, str) or not pinned_commit.strip():
+        pinned_commit = bundle.paper_state.pinned_commit
+    if not pinned_commit:
+        return JsonResponse(
+            {
+                "error": (
+                    "no pinned_commit available — pass one in the body or "
+                    "set bundle.paper_state.pinned_commit via state.yaml"
+                )
+            },
+            status=400,
+        )
+
+    # Resolve which claims to verify.
+    bundle_ids = [c.claim_id for c in bundle.claims]
+    if claim_ids_filter is None:
+        target_ids = bundle_ids
+    else:
+        bundle_id_set = set(bundle_ids)
+        target_ids = [cid for cid in claim_ids_filter if cid in bundle_id_set]
+        # Unknown ids are reported per-result rather than failing the call,
+        # so the SPA can show "missing" without losing the other results.
+        missing = [cid for cid in claim_ids_filter if cid not in bundle_id_set]
+    if not target_ids and (claim_ids_filter is None or not claim_ids_filter):
+        return JsonResponse(
+            {"error": "bundle has no claims to verify"},
+            status=400,
+        )
+
+    # Probe clew ONCE up-front; share the fallback decision across the
+    # whole sweep so we don't import + raise + log N times.
+    clew, clew_fallback_reason = _probe_clew()
+
+    results: List[Mapping[str, Any]] = []
+    all_ok = True
+
+    if claim_ids_filter is not None:
+        for missing_id in missing:  # noqa: F821 — defined in the else branch above
+            results.append(
+                {
+                    "ok": False,
+                    "claim_id": missing_id,
+                    "status": "unknown",
+                    "reason": "claim_id not found in bundle",
+                }
+            )
+            all_ok = False
+
+    for claim_id in target_ids:
+        if clew is None:
+            results.append(
+                {
+                    "ok": False,
+                    "claim_id": claim_id,
+                    "status": "stale",
+                    "reason": clew_fallback_reason,
+                    "fallback": True,
+                }
+            )
+            all_ok = False
+            continue
+
+        try:
+            raw = clew.verify_claim(
+                claim_id=claim_id,
+                against=pinned_commit,
+                bundle_root=str(bundle.root),
+            )
+            results.append(_normalize_result(claim_id, pinned_commit, raw))
+        except Exception as exc:
+            logger.exception(
+                "[re-verify-all] clew.verify_claim raised for %s", claim_id,
+            )
+            results.append(
+                {
+                    "ok": False,
+                    "claim_id": claim_id,
+                    "error": str(exc),
+                }
+            )
+            all_ok = False
+
+    return JsonResponse(
+        {
+            "ok": all_ok,
+            "verified_against": pinned_commit,
+            "count": len(results),
+            "results": results,
+        }
+    )
+
+
+def _probe_clew() -> tuple[Optional[Any], str]:
+    """Try to import scitex_clew + locate verify_claim. Returns (module|None, reason)."""
+    try:
+        clew = import_module("scitex_clew")
+    except ImportError:
+        return None, "scitex-clew not installed"
+    verify_claim = getattr(clew, "verify_claim", None)
+    if not callable(verify_claim):
+        return None, "scitex-clew has no verify_claim() — version skew"
+    return clew, ""

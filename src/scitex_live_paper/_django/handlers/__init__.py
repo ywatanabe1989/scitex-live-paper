@@ -9,9 +9,11 @@ The ``HANDLERS`` mapping is the *single source of truth* for what the
 - ``api/pdf``          — bundle manuscript PDF bytes (ported from
                          ``scitex_writer/_django/handlers/compile.py:handle_pdf``;
                          see ``docs/research/writer-pdf-viewer-findings.md``)
-- ``api/claim/verify`` — M2 re-verify endpoint (calls ``scitex_clew.verify_claim``
-                         against ``bundle.paper_state.pinned_commit``;
-                         degrades gracefully when clew is not installed)
+- ``api/claim/verify``  — M2 re-verify endpoint (calls ``scitex_clew.verify_claim``
+                          against ``bundle.paper_state.pinned_commit``;
+                          degrades gracefully when clew is not installed)
+- ``api/claims/verify`` — M2 bulk re-verify (per-claim envelopes; one bad
+                          claim doesn't 500 the sweep)
 
 Extend this dict when new endpoints land; do NOT inline endpoint
 logic in ``views.py``.
@@ -24,17 +26,18 @@ from typing import Callable, Dict
 from .claims import handle_claims
 from .core import bundle_info, ping
 from .pdf import handle_pdf
-from .reverify import handle_reverify
+from .reverify import handle_reverify, handle_reverify_all
 
 HandlerFn = Callable[..., object]
 
 # fmt: off
 HANDLERS: Dict[str, HandlerFn] = {
-    "api/ping":          ping,
-    "api/bundle-info":   bundle_info,
-    "api/claims":        handle_claims,
-    "api/pdf":           handle_pdf,
-    "api/claim/verify":  handle_reverify,
+    "api/ping":           ping,
+    "api/bundle-info":    bundle_info,
+    "api/claims":         handle_claims,
+    "api/pdf":            handle_pdf,
+    "api/claim/verify":   handle_reverify,
+    "api/claims/verify":  handle_reverify_all,
 }
 # fmt: on
 
@@ -45,4 +48,5 @@ __all__ = [
     "handle_claims",
     "handle_pdf",
     "handle_reverify",
+    "handle_reverify_all",
 ]
