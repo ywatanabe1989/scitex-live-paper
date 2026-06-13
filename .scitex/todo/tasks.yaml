@@ -87,10 +87,20 @@ tasks:
 
   - id: live-paper-absorb-writer-pdf-viewer-b-port
     title: live-paper-absorb-writer-pdf-viewer (b) — port pdf-viewer.ts + handle_pdf into live-paper
-    status: pending
+    status: done
     priority: 2
     note: |
       OWNER: proj-scitex-live-paper
+
+      DONE — landed via PR #29 (commit 87a0b54) with one deliberate
+      deviation from the spec below: vanilla ES modules instead of
+      TypeScript + Vite (no build step needed, fewer moving parts in
+      the package, source ships browser-ready). The backend
+      `handle_pdf` + `api/pdf` route + viewer.html wiring + tests all
+      landed as specced. (c) features picked this up; (d) adopt is
+      unblocked on the live-paper side.
+
+      Original scope retained below for the historical trail.
 
       Port the working bits of scitex-writer's PDF viewer into
       scitex-live-paper. Scope (per the (a) findings doc):
@@ -152,10 +162,23 @@ tasks:
 
   - id: live-paper-absorb-writer-pdf-viewer-c-features
     title: live-paper-absorb-writer-pdf-viewer (c) — add text-layer + annotation-layer + find
-    status: pending
+    status: done
     priority: 3
     note: |
       OWNER: proj-scitex-live-paper
+
+      DONE — landed via PR #30 (commit ce8bf36) with one deliberate
+      deviation from the spec below: find/search uses the BROWSER's
+      NATIVE Ctrl-F over the invisible glyph spans rendered by the
+      text-layer, instead of binding a custom PDF.js `EventBus` find
+      controller. Same user-visible behaviour (Ctrl-F finds matches,
+      highlights them), simpler implementation, no extra JS surface to
+      maintain. text-layer + annotation-layer landed exactly as
+      specced. Tests in `tests/django/test_viewer_text_annotation.py`
+      pin the contract; viewer.css ships the supporting selection
+      styling.
+
+      Original scope retained below for the historical trail.
 
       The writer viewer's pdf-viewer.ts explicitly defers these features
       ("Minimal: no text-layer, no annotation-layer, no find. PR5/6 can
@@ -242,3 +265,105 @@ tasks:
         in parallel.
 
       Cross-ref: (a) docs, (b) port, (c) features.
+
+  # ──────────────────────────────────────────────────────────────────
+  # Hub-publisher surface (operator-directive coord with proj-scitex-hub
+  # and proj-scitex-agentic-journal — two-layer pattern).
+  # ──────────────────────────────────────────────────────────────────
+
+  - id: live-paper-hub-app-publisher
+    title: live-paper-hub-app-publisher — HUB_APP_MANIFEST + derive_wrapper_manifest
+    status: done
+    priority: 2
+    note: |
+      OWNER: proj-scitex-live-paper
+
+      DONE — landed via PR #44 (commit 7ebc252).
+
+      Two-layer publishing pattern mirrored from proj-scitex-agentic-journal
+      (their PRs #34/#35/#37):
+        Layer 1: `HUB_APP_MANIFEST` (pip-package shape, MappingProxyType-frozen)
+                 — single source of truth.
+        Layer 2: `derive_wrapper_manifest()` — maps pip shape → hub
+                 workspace UI `manifest.json` v2.0.0.
+
+      EP shape (coordinated with proj-scitex-hub msg 6c86860d, parity
+      with agentic-journal PR #37):
+        scitex_hub.apps       = scitex_live_paper_hub_app.urls:urlpatterns
+        scitex_hub.app_config = scitex_live_paper._django.apps:LivePaperConfig
+
+      Tests: 31 in `tests/test_hub_app_publisher.py` (no mocks; frozen-view
+      semantics + mapping table + EP keys + defensive branches all pinned).
+
+      Open thread: `HUB_APP_NAME` convention — live-paper ships the
+      upstream pip name ("scitex-live-paper"); agentic-journal ships
+      the wrapper module name ("scitex_agentic_journal_hub_app"). Both
+      work; alignment is wrapper-author cosmetic. Awaiting journal's
+      pick (msg fcffcdaa) — no urgency.
+
+  - id: live-paper-cli-hub-manifest
+    title: live-paper-cli-hub-manifest — `scitex-live-paper hub-manifest` build-pipeline command
+    status: done
+    priority: 3
+    note: |
+      OWNER: proj-scitex-live-paper
+
+      DONE — landed via PR #45 (commit b947cbe). Follow-up to
+      hub-app-publisher. Lets hub-side wrapper apps regenerate
+      `manifest.json` via a build-pipeline command without importing
+      live-paper into hub's runtime:
+
+        scitex-live-paper hub-manifest > manifest.json
+        scitex-live-paper hub-manifest --label "Live Paper" --subtitle "..."
+        scitex-live-paper hub-manifest --schema-version 2.1.0
+        scitex-live-paper hub-manifest --compact
+
+      Output is `derive_wrapper_manifest(...)` serialised with
+      `sort_keys=True, indent=2` for stable VCS-friendly diffs. 17
+      tests in `tests/cli/test_hub_manifest_cmd.py` (no mocks; real
+      CliRunner + real derive helper).
+
+  # ──────────────────────────────────────────────────────────────────
+  # Held workstreams — pending the operator's M4 path-B a/b decision
+  # (F0+F1 vs F3). Lead directive msg 1b2fe3fa.
+  # ──────────────────────────────────────────────────────────────────
+
+  - id: live-paper-m5-doi-landing
+    title: live-paper-m5-doi-landing — M5 DOI-landing prep
+    status: blocked
+    priority: 2
+    note: |
+      OWNER: proj-scitex-live-paper
+
+      HELD by lead (msg 1b2fe3fa) pending the operator's M4 path-B a/b
+      decision. Starting this now risks building against a shape that
+      a/b changes.
+
+      Activate when:
+        - Operator picks F0+F1 vs F3 for hub plugin discovery.
+        - Lead pings with the activation signal.
+
+      Until then: no impl, no spec. Cross-ref `docs/research/build-hub-resolver-needs.md`
+      for the read-only pre-work that surveys what the implementation
+      will need to consume.
+
+  - id: live-paper-build-hub-resolver
+    title: live-paper-build-hub-resolver — factory for `mount(resolver=...)` consumers
+    status: blocked
+    priority: 2
+    note: |
+      OWNER: proj-scitex-hub (factory lives in hub) + proj-scitex-live-paper (shape ownership)
+
+      HELD by lead (msg 1b2fe3fa). The factory itself lives in hub —
+      live-paper publishes the resolver SHAPE
+      (`BundleResolver = Callable[..., BundleContext]`) and the public
+      types (`BundleContext`, `BundleSource`, `PaperState`,
+      `RendererOptions`); hub publishes the factory that produces a
+      resolver wired up to hub-internal helpers.
+
+      Live-paper's role here is: keep the public shape stable, audit
+      that the docstring in `_mount.py` stays accurate.
+
+      Read-only pre-work landed at `docs/research/build-hub-resolver-needs.md`
+      — captures what each consumer (hub, scholar, writer) will need
+      so the implementation PR has a starting point once unblocked.
