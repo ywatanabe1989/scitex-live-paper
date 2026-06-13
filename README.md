@@ -10,7 +10,7 @@
 
 A traditional PDF is dead — you cannot click a claim, see the code that produced it, re-run it, or check provenance. `scitex-live-paper` is the web rendering layer that turns an accepted manuscript bundle into a *live paper*: a page where every claim is hash-linked to the executable artefact that produced it, every figure traces to a `figz` / `pltz` blob, and the verification badge tracks a continuous re-review cycle.
 
-> **Status:** pre-alpha scaffold (v0.1.0-alpha). README + minimum package skeleton. M1 (read-only renderer) implementation pending — tracked under [issues](https://github.com/ywatanabe1989/scitex-live-paper/issues).
+> **Status:** alpha (v0.1.0-alpha). M1 (read-only renderer) shipped; M2 (live re-verify) shipped — see [`docs/dev/m2-reverify-runbook.md`](docs/dev/m2-reverify-runbook.md). M3 (hub mount) in flight on the [scitex-hub side](https://github.com/ywatanabe1989/scitex-hub). Roadmap below.
 
 ---
 
@@ -91,13 +91,13 @@ The Django app pattern for M3 (Hub mount) and the SPA-shell + API dispatch split
 
 ## Roadmap
 
-| Milestone | Goal                                                                 |
-|-----------|----------------------------------------------------------------------|
-| **M1**    | Read-only static-site renderer for an accepted bundle (CLI)          |
-| M2        | Live re-verify button (calls `clew.verify_claim()` against pinned commit) |
-| M3        | Mount as Django app on `scitex-hub` `/viewer-v2/`                    |
-| M4        | Re-review badge fed from `scitex-agentic-journal`                    |
-| M5        | Public DOI landing page (sandbox → Zenodo → JaLC)                    |
+| Milestone | Status         | Goal                                                                 |
+|-----------|----------------|----------------------------------------------------------------------|
+| **M1**    | ✅ shipped     | Read-only static-site renderer for an accepted bundle (CLI)          |
+| **M2**    | ✅ shipped     | Live re-verify (`api/claim/verify` + `api/claims/verify` + SPA Re-verify button) — see [runbook](docs/dev/m2-reverify-runbook.md) |
+| M3        | in flight (hub-side) | Mount as Django app on `scitex-hub` `/apps/live-paper/<paper_id>/` |
+| M4        | pending        | Re-review badge fed from `scitex-agentic-journal`                    |
+| M5        | future         | Public DOI landing page (sandbox → Zenodo → JaLC)                    |
 
 Issues for M1 are filed in this repo — see [open issues](https://github.com/ywatanabe1989/scitex-live-paper/issues).
 
