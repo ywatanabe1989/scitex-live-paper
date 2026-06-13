@@ -36,6 +36,18 @@ from .bundle import Bundle, BundleError, Claim
 
 __version__ = "0.1.0"
 
+# Hub-publisher surface — single source of truth for how live-paper
+# represents itself to scitex-hub's plugin registry. Mirrors the
+# 2-layer pattern landed by scitex-agentic-journal so wrapper apps
+# under hub can derive their workspace UI manifest instead of
+# hand-filling 30+ keys.
+from ._hub_app_publisher import (
+    HUB_APP_MANIFEST,
+    HUB_APP_NAME,
+    HUB_APP_VERSION,
+    derive_wrapper_manifest,
+)
+
 
 def mount(resolver):
     """Build URL patterns that inject a per-request :class:`BundleContext`.
@@ -79,6 +91,11 @@ __all__ = [
     "RendererTheme",
     # Django mount helper (lazy-imports Django on call)
     "mount",
+    # Hub-publisher surface — manifest + helper for hub-side wrappers
+    "HUB_APP_MANIFEST",
+    "HUB_APP_NAME",
+    "HUB_APP_VERSION",
+    "derive_wrapper_manifest",
     # submodules — kept for back-compat
     "bundle",
     "dag",
