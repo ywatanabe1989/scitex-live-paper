@@ -22,8 +22,11 @@ See README.md for the dependency graph and roadmap.
 
 from . import bundle, dag
 from ._types import (
+    BundleAccessDenied,
     BundleContext,
+    BundleNotFound,
     BundleResolver,
+    BundleResolverError,
     BundleSource,
     PaperStage,
     PaperState,
@@ -89,6 +92,10 @@ __all__ = [
     "ReReviewStatus",
     "RendererOptions",
     "RendererTheme",
+    # Resolver error hierarchy — translated to HTTP status by `mount()`
+    "BundleResolverError",
+    "BundleNotFound",
+    "BundleAccessDenied",
     # Django mount helper (lazy-imports Django on call)
     "mount",
     # Hub-publisher surface — manifest + helper for hub-side wrappers

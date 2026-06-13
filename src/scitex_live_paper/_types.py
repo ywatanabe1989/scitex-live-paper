@@ -45,7 +45,68 @@ __all__ = [
     "RendererOptions",
     "ReReviewStatus",
     "ReReviewBadge",
+    # Resolver error hierarchy — raised by host-supplied resolvers and
+    # caught by `mount(resolver=...)` to map to the right HTTP status.
+    "BundleResolverError",
+    "BundleNotFound",
+    "BundleAccessDenied",
 ]
+
+
+# ──────────────────────────────────────────────────────────────────
+# Resolver error hierarchy — host-raised, mount-translated
+# ──────────────────────────────────────────────────────────────────
+
+
+class BundleResolverError(Exception):
+    """Base class for errors a host-supplied resolver may raise.
+
+    Caught by :func:`scitex_live_paper.mount` (and its underlying
+    ``_django._mount.mount``) to translate to a clean HTTP status
+    instead of leaking a 500 + traceback. Hosts subclass to signal
+    specific failure modes; the mount layer maps each subclass to the
+    documented status code.
+
+    Distinct from :class:`scitex_live_paper.BundleError` — that's a
+    bundle-LOAD error (raised by ``bundle.load()`` when the bundle
+    directory layout is invalid). A resolver may catch ``BundleError``
+    internally and re-raise as ``BundleNotFound`` if the loading
+    failure means "this paper doesn't exist on this host". The two
+    error families never mix at the public surface.
+
+    Subclass-to-HTTP-status table (see :func:`._django._mount.mount`):
+
+    ===========================  ========
+    Exception                    Status
+    ===========================  ========
+    :class:`BundleNotFound`           404
+    :class:`BundleAccessDenied`       403
+    :class:`BundleResolverError`      500
+    ===========================  ========
+
+    Any subclass NOT in the table falls back to ``500`` (last-resort).
+    Non-``BundleResolverError`` exceptions raised by the resolver
+    propagate unchanged — Django's default 500 handler renders them.
+    """
+
+
+class BundleNotFound(BundleResolverError):
+    """The requested bundle does not exist on this host.
+
+    Mapped to HTTP ``404`` by :func:`mount`. The resolver raises this
+    when the URL kwargs (e.g. ``paper_id``) don't match any bundle
+    the host knows about.
+    """
+
+
+class BundleAccessDenied(BundleResolverError):
+    """The requesting user is not authorised to access this bundle.
+
+    Mapped to HTTP ``403`` by :func:`mount`. The resolver raises this
+    when authentication succeeded but the user's permissions don't
+    cover the requested bundle (e.g. project-scoped access in
+    scitex-hub).
+    """
 
 
 # ──────────────────────────────────────────────────────────────────
