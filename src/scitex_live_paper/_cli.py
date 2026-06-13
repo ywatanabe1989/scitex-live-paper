@@ -387,6 +387,71 @@ def _looks_hex(value: str) -> bool:
     return all(c in "0123456789abcdefABCDEF" for c in value)
 
 
+@cli.command("hub-manifest")
+@click.option(
+    "--label",
+    default=None,
+    help="Override workspace tile title (default: HUB_APP_MANIFEST display_name).",
+)
+@click.option(
+    "--subtitle",
+    default=None,
+    help="Override short tagline (default: first sentence of description).",
+)
+@click.option(
+    "--schema-version",
+    default="2.0.0",
+    show_default=True,
+    help="Hub manifest schema_version to declare.",
+)
+@click.option(
+    "--compact",
+    is_flag=True,
+    default=False,
+    help="Emit single-line JSON (default: indented + sorted for stable VCS diffs).",
+)
+def hub_manifest_cmd(
+    label: str | None,
+    subtitle: str | None,
+    schema_version: str,
+    compact: bool,
+) -> None:
+    """Print the scitex-hub workspace manifest as JSON.
+
+    Hub-side wrapper apps (e.g. ``apps/workspace/live_paper_app/manifest.json``)
+    can regenerate the file via:
+
+    \b
+        scitex-live-paper hub-manifest > manifest.json
+
+    The output is the v2.0.0 hub workspace UI shape — derived from
+    :data:`scitex_live_paper.HUB_APP_MANIFEST` via
+    :func:`scitex_live_paper.derive_wrapper_manifest`. Default formatting
+    is indented + ``sort_keys=True`` so successive runs produce stable,
+    review-friendly diffs.
+
+    Useful per-wrapper overrides:
+
+    \b
+        --label "Live Paper"
+        --subtitle "Mounted under apps/live-paper/<paper_id>/"
+    """
+    import json as _json
+
+    from scitex_live_paper import derive_wrapper_manifest
+
+    manifest = derive_wrapper_manifest(
+        label=label,
+        subtitle=subtitle,
+        schema_version=schema_version,
+    )
+
+    if compact:
+        click.echo(_json.dumps(manifest, sort_keys=True))
+    else:
+        click.echo(_json.dumps(manifest, sort_keys=True, indent=2))
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entrypoint used by the ``[project.scripts]`` declaration.
 
