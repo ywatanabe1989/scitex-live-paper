@@ -184,6 +184,19 @@ class PaperState:
 # What a "bundle provider" callable returns when invoked. The contract
 # is "give me a Bundle"; the resolver may load lazily, fetch from a
 # DB, or unpack from S3 — the renderer doesn't care.
+#
+# NOT TO BE CONFUSED with :data:`scitex_live_paper.MountResolver`,
+# which is a request-arg callable (``Callable[..., BundleContext]``)
+# passed to :func:`mount`. The two live at different layers:
+#
+# - ``BundleResolver`` (zero-arg) → handed to
+#   :meth:`BundleSource.from_resolver`. Per-bundle, deferred IO.
+# - ``MountResolver`` (request-arg) → handed to :func:`mount`.
+#   Per-request, builds the whole :class:`BundleContext`.
+#
+# The naming clash with ``_django._mount.BundleResolver`` (a deprecated
+# alias to ``MountResolver``) is documented at
+# `_django/_mount.py`; this constant predates that alias.
 BundleResolver = Callable[[], "Bundle"]
 
 

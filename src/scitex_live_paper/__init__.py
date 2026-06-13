@@ -37,6 +37,26 @@ from ._types import (
 )
 from .bundle import Bundle, BundleError, Claim
 
+
+def _import_mount_resolver():
+    """Lazy accessor for :data:`MountResolver` (avoids Django import cost)."""
+    from ._django._mount import MountResolver
+
+    return MountResolver
+
+
+# Public type alias for `mount(resolver=...)`. Defined here as a
+# string-then-callable so we don't pay the Django import cost just by
+# importing the package — host apps that only need the library surface
+# (`from scitex_live_paper import BundleContext`) don't load Django.
+# When a caller actually accesses `scitex_live_paper.MountResolver`,
+# Python triggers `__getattr__` below which lazy-resolves it.
+# (PEP 562 — module-level `__getattr__`.)
+def __getattr__(name):
+    if name == "MountResolver":
+        return _import_mount_resolver()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 __version__ = "0.1.0"
 
 # Hub-publisher surface — single source of truth for how live-paper
@@ -84,7 +104,8 @@ __all__ = [
     "Claim",
     # render-time types — the reusable-component public surface
     "BundleContext",
-    "BundleResolver",
+    "BundleResolver",   # zero-arg `Callable[[], Bundle]` for `BundleSource.from_resolver`
+    "MountResolver",    # request-arg `Callable[..., BundleContext]` for `mount(resolver=...)`
     "BundleSource",
     "PaperStage",
     "PaperState",
