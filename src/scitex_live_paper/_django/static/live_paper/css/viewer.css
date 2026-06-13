@@ -255,3 +255,57 @@ body {
   opacity: 0.5;
   cursor: progress;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+ * M4 — paper-level re-review badge
+ * Same status palette as the M2 per-claim chips; chip is wider +
+ * carries a notes + log link beneath.
+ * ────────────────────────────────────────────────────────────────── */
+
+.live-paper-re-review {
+  display: block;
+  margin: 24px 0 8px;
+}
+
+.lp-re-review-badge {
+  display: block;
+  padding: 12px 16px;
+  background: #2a2a3a;
+  border-radius: 6px;
+  border-left: 4px solid var(--lp-status-stale);
+}
+
+.lp-re-review-badge[data-status="verified"]     { border-left-color: var(--lp-status-verified); }
+.lp-re-review-badge[data-status="stale"]        { border-left-color: var(--lp-status-stale); }
+.lp-re-review-badge[data-status="contradicted"] { border-left-color: var(--lp-status-contradicted); }
+.lp-re-review-badge[data-status="concerns"]     { border-left-color: var(--lp-status-stale); }
+
+.lp-re-review-badge-label {
+  font-weight: 600;
+  color: var(--lp-fg);
+  text-transform: capitalize;
+}
+
+.lp-re-review-badge-reviewer,
+.lp-re-review-badge-ts {
+  color: var(--lp-muted);
+  font-size: 0.875em;
+}
+
+.lp-re-review-badge-notes {
+  margin: 8px 0 4px;
+  color: var(--lp-fg);
+  font-size: 0.9em;
+}
+
+.lp-re-review-badge-log {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--lp-accent);
+  font-size: 0.85em;
+  text-decoration: none;
+}
+
+.lp-re-review-badge-log:hover {
+  text-decoration: underline;
+}

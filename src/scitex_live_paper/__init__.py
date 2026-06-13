@@ -27,6 +27,8 @@ from ._types import (
     BundleSource,
     PaperStage,
     PaperState,
+    ReReviewBadge,
+    ReReviewStatus,
     RendererOptions,
     RendererTheme,
 )
@@ -71,6 +73,8 @@ __all__ = [
     "BundleSource",
     "PaperStage",
     "PaperState",
+    "ReReviewBadge",
+    "ReReviewStatus",
     "RendererOptions",
     "RendererTheme",
     # Django mount helper (lazy-imports Django on call)

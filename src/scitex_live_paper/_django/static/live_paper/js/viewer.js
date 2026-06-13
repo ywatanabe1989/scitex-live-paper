@@ -23,6 +23,7 @@ import {
 } from "./_utils.js";
 import { PDFViewer } from "./pdf-viewer.js";
 import { renderClaimsSidebar } from "./claims-sidebar.js";
+import { renderReReviewBadge } from "./re-review-badge.js";
 
 const PDFJS_REL = "../pdfjs/pdf.min.mjs"; // relative to data-api-base
 const PDFJS_WORKER_REL = "../pdfjs/pdf.worker.min.mjs";
@@ -49,7 +50,9 @@ async function boot(rootEl) {
     return;
   }
 
-  // Boot RPCs — bundle-info populates the JSON pre block.
+  // Boot RPCs — bundle-info populates the JSON pre block AND drives
+  // the M4 paper-level re-review badge (rendered above the claims
+  // sidebar when the host injected one).
   try {
     const ping = await fetchJson(apiBase + "ping");
     if (!ping || ping.ok !== true) {
@@ -57,6 +60,7 @@ async function boot(rootEl) {
     }
     const info = await fetchJson(apiBase + "bundle-info");
     setStatus(info);
+    renderReReviewBadge(rootEl, info);
   } catch (err) {
     console.error("[live-paper] boot RPCs failed", err);
     setStatus({ error: String(err) });
