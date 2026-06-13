@@ -118,11 +118,14 @@ def handle_reverify(request) -> HttpResponse:
     # Try the real upstream ``scitex-clew`` call. If the package isn't
     # installed, degrade gracefully with an explicit reason so the SPA
     # can keep the badge meaningful instead of showing a 500.
+    # Install scitex-clew via the ``[clew]`` optional extra:
+    #   pip install scitex-live-paper[clew]
     try:
         clew = import_module("scitex_clew")
     except ImportError:
         logger.info(
-            "[re-verify] scitex-clew not installed — degrading claim %s to stale",
+            "[re-verify] scitex-clew not installed — degrading claim %s to stale "
+            "(install scitex-live-paper[clew] for live re-verify)",
             claim_id,
         )
         return JsonResponse(
@@ -130,7 +133,7 @@ def handle_reverify(request) -> HttpResponse:
                 "ok": False,
                 "claim_id": claim_id,
                 "status": "stale",
-                "reason": "scitex-clew not installed",
+                "reason": "scitex-clew not installed (install scitex-live-paper[clew])",
                 "fallback": True,
             }
         )
@@ -392,11 +395,15 @@ def handle_reverify_all(request) -> HttpResponse:
 
 
 def _probe_clew() -> tuple[Optional[Any], str]:
-    """Try to import scitex_clew + locate verify_claim. Returns (module|None, reason)."""
+    """Try to import scitex_clew + locate verify_claim. Returns (module|None, reason).
+
+    Reason strings name the ``[clew]`` extra so the operator can copy
+    the install command straight out of the SPA badge / curl output.
+    """
     try:
         clew = import_module("scitex_clew")
     except ImportError:
-        return None, "scitex-clew not installed"
+        return None, "scitex-clew not installed (install scitex-live-paper[clew])"
     verify_claim = getattr(clew, "verify_claim", None)
     if not callable(verify_claim):
         return None, "scitex-clew has no verify_claim() — version skew"
