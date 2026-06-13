@@ -3,15 +3,17 @@
 The ``HANDLERS`` mapping is the *single source of truth* for what the
 ``<path:endpoint>`` catch-all in ``views.api_dispatch`` will route.
 
-- ``api/ping``        — liveness probe
-- ``api/bundle-info`` — bundle summary + paper_state
-- ``api/pdf``         — bundle manuscript PDF bytes (ported from
-                        ``scitex_writer/_django/handlers/compile.py:handle_pdf``;
-                        see ``docs/research/writer-pdf-viewer-findings.md``)
+- ``api/ping``         — liveness probe
+- ``api/bundle-info``  — bundle summary + paper_state
+- ``api/pdf``          — bundle manuscript PDF bytes (ported from
+                         ``scitex_writer/_django/handlers/compile.py:handle_pdf``;
+                         see ``docs/research/writer-pdf-viewer-findings.md``)
+- ``api/claim/verify`` — M2 re-verify endpoint (calls ``scitex_clew.verify_claim``
+                         against ``bundle.paper_state.pinned_commit``;
+                         degrades gracefully when clew is not installed)
 
-M2 will add the claim re-verify endpoint (``api/claim/<id>/verify``) —
-extend this dict when those land; do NOT inline endpoint logic in
-``views.py``.
+Extend this dict when new endpoints land; do NOT inline endpoint
+logic in ``views.py``.
 """
 
 from __future__ import annotations
@@ -20,15 +22,17 @@ from typing import Callable, Dict
 
 from .core import bundle_info, ping
 from .pdf import handle_pdf
+from .reverify import handle_reverify
 
 HandlerFn = Callable[..., object]
 
 # fmt: off
 HANDLERS: Dict[str, HandlerFn] = {
-    "api/ping":         ping,
-    "api/bundle-info":  bundle_info,
-    "api/pdf":          handle_pdf,
+    "api/ping":          ping,
+    "api/bundle-info":   bundle_info,
+    "api/pdf":           handle_pdf,
+    "api/claim/verify":  handle_reverify,
 }
 # fmt: on
 
-__all__ = ["HANDLERS", "ping", "bundle_info", "handle_pdf"]
+__all__ = ["HANDLERS", "ping", "bundle_info", "handle_pdf", "handle_reverify"]
