@@ -289,6 +289,104 @@ def _print_human_summary(payload: dict) -> None:
     )
 
 
+# Mirrors scitex-clew's VerificationStatus palette. Used by `validate`
+# to flag claims whose status isn't a recognised lifecycle value (a
+# common operator footgun: a hand-edit typo like ``"verfied"``).
+_KNOWN_CLAIM_STATUSES = frozenset({
+    "registered",
+    "verified",
+    "stale",
+    "contradicted",
+})
+
+
+@cli.command("validate")
+@click.argument(
+    "bundle_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
+)
+def validate_cmd(bundle_path: str) -> None:
+    """Run a fuller pre-flight check than ``info``.
+
+    On top of ``bundle.load()``'s syntactic checks, ``validate`` runs:
+
+    - **Claim integrity**: no duplicate ``claim_id``s, every
+      ``status`` string is a known scitex-clew lifecycle value, every
+      ``source_hash`` looks hex-shaped.
+    - **PaperState sanity**: ``accepted`` / ``published`` stages
+      without a ``pinned_commit`` are flagged (badge would show but
+      re-verify would be ungated).
+
+    Reports every issue with a clear "<file>: <reason>" line. Exits 0
+    on clean, non-zero (count of issues) otherwise. Use this BEFORE
+    ``render`` or ``serve`` against an unfamiliar bundle.
+    """
+    try:
+        bundle = bundle_module.load(bundle_path)
+    except bundle_module.BundleError as exc:
+        # The load itself failed — surface as a ClickException so the
+        # exit code is non-zero with no traceback.
+        raise click.ClickException(str(exc)) from exc
+
+    issues = _validate_bundle(bundle)
+
+    if not issues:
+        click.echo(f"ok: {bundle_path} (no issues found)")
+        return
+
+    for issue in issues:
+        click.echo(f"warn: {issue}")
+    click.echo(f"\n{len(issues)} issue{'' if len(issues) == 1 else 's'} found")
+
+    # Non-zero exit signalling the count, capped at 125 (POSIX
+    # convention: exit codes above 125 reserve for shell-level errors).
+    raise click.exceptions.Exit(code=min(len(issues), 125))
+
+
+def _validate_bundle(bundle: "bundle_module.Bundle") -> list[str]:
+    """Run every check and return a list of "<file>: <reason>" strings."""
+    issues: list[str] = []
+
+    seen_ids: set[str] = set()
+    for claim in bundle.claims:
+        if claim.claim_id in seen_ids:
+            issues.append(
+                f"claims.json: duplicate claim_id {claim.claim_id!r} "
+                f"(file_path={claim.file_path!r})"
+            )
+        else:
+            seen_ids.add(claim.claim_id)
+
+        if claim.status not in _KNOWN_CLAIM_STATUSES:
+            issues.append(
+                f"claims.json: claim {claim.claim_id!r} has unknown status "
+                f"{claim.status!r} (expected one of "
+                f"{sorted(_KNOWN_CLAIM_STATUSES)!r})"
+            )
+
+        if claim.source_hash is not None and not _looks_hex(claim.source_hash):
+            issues.append(
+                f"claims.json: claim {claim.claim_id!r} source_hash "
+                f"{claim.source_hash!r} doesn't look hex-shaped"
+            )
+
+    ps = bundle.paper_state
+    if ps.stage in {"accepted", "published"} and not ps.pinned_commit:
+        issues.append(
+            f"state.yaml: stage is {ps.stage!r} but no pinned_commit set — "
+            "verification badge will show but re-verify is ungated"
+        )
+
+    return issues
+
+
+def _looks_hex(value: str) -> bool:
+    """Return True iff `value` is a non-empty string of hex chars."""
+    if not value:
+        return False
+    return all(c in "0123456789abcdefABCDEF" for c in value)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entrypoint used by the ``[project.scripts]`` declaration.
 
