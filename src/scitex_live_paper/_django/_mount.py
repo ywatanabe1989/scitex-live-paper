@@ -87,12 +87,28 @@ from .._types import (
 )
 from . import views
 
-__all__ = ["BundleResolver", "mount"]
+__all__ = ["MountResolver", "BundleResolver", "mount"]
 
 #: A host-supplied callable that produces a :class:`BundleContext` for
-#: the current request. URL kwargs flow through as keyword args; the
-#: ``**url_kwargs`` form keeps the contract forward-compatible.
-BundleResolver = Callable[..., BundleContext]
+#: the current request, passed to :func:`mount`. The Django
+#: ``request`` flows in as the first positional arg; every URL kwarg
+#: captured by the host's ``path()`` mount (plus ``endpoint`` for the
+#: api dispatcher) flows through as a keyword arg; the ``**url_kwargs``
+#: form keeps the contract forward-compatible.
+#:
+#: NOT to be confused with :data:`scitex_live_paper.BundleResolver`,
+#: which is a *zero-arg* callable returning a :class:`Bundle` (used by
+#: :meth:`BundleSource.from_resolver`). Different layer, different
+#: signature.
+MountResolver = Callable[..., BundleContext]
+
+#: **Deprecated alias** kept for back-compat with PR #27's first
+#: landing of this surface. New code should use :data:`MountResolver`
+#: to avoid the name clash with the zero-arg
+#: :data:`scitex_live_paper.BundleResolver` used by
+#: :meth:`BundleSource.from_resolver`. This alias may be removed in a
+#: future major.
+BundleResolver = MountResolver
 
 
 def _resolver_error_to_response(exc: BundleResolverError) -> HttpResponse:
