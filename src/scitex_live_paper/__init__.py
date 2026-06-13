@@ -34,7 +34,7 @@ from ._types import (
 )
 from .bundle import Bundle, BundleError, Claim
 
-__version__ = "0.1.0-alpha"
+__version__ = "0.1.0"
 
 
 def mount(resolver):
