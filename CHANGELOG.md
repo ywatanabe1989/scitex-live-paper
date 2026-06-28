@@ -16,7 +16,20 @@ may change without a changelog entry.
 
 ## [Unreleased]
 
-(Nothing yet.)
+### Fixed
+
+- M2 re-verify handlers (`api/claim/verify` + `api/claims/verify`) now
+  call clew's real `verify_claim(claim_id_or_location)` signature — a
+  single positional arg — instead of the non-existent
+  `verify_claim(claim_id=, against=, bundle_root=)` kwargs that 500'd
+  against a real `scitex-clew` install. The response now reads the
+  nested `result["claim"]["status"]` / `["verified_at"]` (clew's real
+  shape) instead of absent top-level keys, and maps clew's flat
+  `not_found` result to `ok: false`. `pinned_commit` is now metadata
+  only (echoed as `verified_against`): clew is git-agnostic, so the
+  host/deployment owns checking out the commit and pointing clew's DB
+  via `SCITEX_CLEW_DB_PATH` before serving — these handlers never
+  mutate the working tree.
 
 ## [0.1.0] — 2026-06-13
 

@@ -74,9 +74,15 @@ def fake_scitex_clew() -> Iterator[types.ModuleType]:
     sentinel = object()
     original = sys.modules.get(key, sentinel)
     module = types.ModuleType(key)
-    module.verify_claim = lambda *, claim_id, against, bundle_root: {
-        "status": "verified",
-        "verified_at": "2026-06-13T00:00:00Z",
+    module.verify_claim = lambda claim_id_or_location: {
+        "claim": {
+            "claim_id": claim_id_or_location,
+            "status": "verified",
+            "verified_at": "2026-06-13T00:00:00Z",
+        },
+        "source_verified": True,
+        "chain_verified": True,
+        "details": ["Source file hash matches"],
     }
     sys.modules[key] = module
     try:
@@ -174,38 +180,45 @@ def test_bulk_no_pinned_commit_anywhere_returns_400(client, env_snapshot, fake_s
 
 
 def test_bulk_body_pinned_commit_wins_over_bundle(client, env_snapshot, fake_scitex_clew):
+    # pinned_commit is METADATA only (clew is git-agnostic); assert on the
+    # response echo, and that the fake was called with just the claim_id.
     captured: list[str] = []
 
-    def recorder(*, claim_id, against, bundle_root):
-        captured.append(against)
-        return {"status": "verified"}
+    def recorder(claim_id_or_location):
+        captured.append(claim_id_or_location)
+        return {"claim": {"status": "verified"}}
 
     fake_scitex_clew.verify_claim = recorder
     _pin(BUNDLE_ACCEPTED)
 
-    client.post(
+    response = client.post(
         "/api/claims/verify",
         data=json.dumps({"pinned_commit": "body-commit"}),
         content_type="application/json",
     )
 
-    # all 3 calls used the body's pinned_commit
-    assert captured == ["body-commit", "body-commit", "body-commit"]
+    body = json.loads(response.content)
+    assert body["verified_against"] == "body-commit"
+    # the fake was called once per claim with the claim_id positionally
+    assert len(captured) == 3
+    assert all(isinstance(c, str) and c for c in captured)
 
 
 def test_bulk_falls_back_to_bundle_paper_state_commit(client, env_snapshot, fake_scitex_clew):
     captured: list[str] = []
 
-    def recorder(*, claim_id, against, bundle_root):
-        captured.append(against)
-        return {"status": "verified"}
+    def recorder(claim_id_or_location):
+        captured.append(claim_id_or_location)
+        return {"claim": {"status": "verified"}}
 
     fake_scitex_clew.verify_claim = recorder
     _pin(BUNDLE_ACCEPTED)
 
-    client.post("/api/claims/verify", data="", content_type="application/json")
+    response = client.post("/api/claims/verify", data="", content_type="application/json")
 
-    assert all(c == "deadbeefcafef00d12345678" for c in captured)
+    body = json.loads(response.content)
+    assert body["verified_against"] == "deadbeefcafef00d12345678"
+    assert len(captured) == 3
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -279,10 +292,10 @@ def test_bulk_happy_path_carries_verified_against(client, env_snapshot, fake_sci
 
 
 def test_bulk_clew_raises_one_does_not_500_the_sweep(client, env_snapshot, fake_scitex_clew):
-    def picky(*, claim_id, against, bundle_root):
-        if claim_id == "claim_f6e5d4c3b2a1":
+    def picky(claim_id_or_location):
+        if claim_id_or_location == "claim_f6e5d4c3b2a1":
             raise RuntimeError("simulated clew failure")
-        return {"status": "verified"}
+        return {"claim": {"status": "verified"}}
 
     fake_scitex_clew.verify_claim = picky
     _pin(BUNDLE_ACCEPTED)
@@ -297,6 +310,49 @@ def test_bulk_clew_raises_one_does_not_500_the_sweep(client, env_snapshot, fake_
     assert "simulated clew failure" in by_id["claim_f6e5d4c3b2a1"]["error"]
     assert by_id["claim_a1b2c3d4e5f6"]["ok"] is True
     assert by_id["claim_999888777666"]["ok"] is True
+
+
+def test_bulk_not_found_result_flips_sweep_to_incomplete(client, env_snapshot, fake_scitex_clew):
+    # clew resolves the claim but reports not_found (flat shape, no "claim"
+    # key) for one claim → that per-result is ok=False, and the overall
+    # sweep ok flips to False even though no exception was raised.
+    def recorder(claim_id_or_location):
+        if claim_id_or_location == "claim_f6e5d4c3b2a1":
+            return {
+                "status": "not_found",
+                "message": f"No claim found for '{claim_id_or_location}'",
+            }
+        return {"claim": {"status": "verified"}}
+
+    fake_scitex_clew.verify_claim = recorder
+    _pin(BUNDLE_ACCEPTED)
+
+    response = client.post("/api/claims/verify", data="", content_type="application/json")
+    body = json.loads(response.content)
+
+    assert response.status_code == 200
+    assert body["ok"] is False
+    by_id = {r["claim_id"]: r for r in body["results"]}
+    assert by_id["claim_f6e5d4c3b2a1"]["ok"] is False
+    assert by_id["claim_f6e5d4c3b2a1"]["status"] == "not_found"
+    assert by_id["claim_a1b2c3d4e5f6"]["ok"] is True
+
+
+def test_bulk_per_result_envelope_carries_nested_status_and_details(
+    client, env_snapshot, fake_scitex_clew
+):
+    # Per-result envelope matches the single endpoint: nested status +
+    # details aggregation (source_verified/chain_verified/details list).
+    _pin(BUNDLE_ACCEPTED)
+    response = client.post("/api/claims/verify", data="", content_type="application/json")
+    body = json.loads(response.content)
+    for result in body["results"]:
+        assert result["status"] == "verified"
+        assert result["verified_at"] == "2026-06-13T00:00:00Z"
+        assert result["verified_against"] == "deadbeefcafef00d12345678"
+        assert result["details"]["source_verified"] is True
+        assert result["details"]["chain_verified"] is True
+        assert result["details"]["details"] == ["Source file hash matches"]
 
 
 def test_bulk_count_matches_results_length(client, env_snapshot, fake_scitex_clew):
