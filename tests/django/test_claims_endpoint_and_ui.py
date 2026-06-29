@@ -266,12 +266,19 @@ def test_viewer_js_sidebar_mount_id_is_live_paper_claims():
 def test_viewer_css_defines_status_colour_custom_properties():
     text = _viewer_css()
     for var in (
+        # clew claim-status vocabulary (verify_claim / claims.json)
         "--lp-status-verified",
-        "--lp-status-stale",
-        "--lp-status-contradicted",
+        "--lp-status-partial",
+        "--lp-status-mismatch",
+        "--lp-status-missing",
         "--lp-status-registered",
+        "--lp-status-not_found",
+        # transient client-side UI states
         "--lp-status-error",
         "--lp-status-verifying",
+        # M4 re-review badge vocabulary (separate, paper-level)
+        "--lp-status-stale",
+        "--lp-status-contradicted",
     ):
         assert var in text, f"missing CSS custom property: {var}"
 
@@ -279,9 +286,20 @@ def test_viewer_css_defines_status_colour_custom_properties():
 def test_viewer_css_styles_each_claim_status_via_data_attribute():
     text = _viewer_css()
     # Per-status colours bind via [data-status="..."] so the JS only
-    # has to write `dataset.status` — no class swapping needed.
-    for status in ("verified", "stale", "contradicted", "verifying", "error"):
-        assert f'data-status="{status}"' in text
+    # has to write `dataset.status` — no class swapping needed. The
+    # claim palette is clew's verify_claim / claims.json vocabulary,
+    # plus the two transient client-side UI states.
+    for status in (
+        "verified",
+        "partial",
+        "mismatch",
+        "missing",
+        "registered",
+        "not_found",
+        "verifying",
+        "error",
+    ):
+        assert f'.lp-claim[data-status="{status}"]' in text
 
 
 def test_viewer_css_styles_claims_sidebar():
@@ -301,12 +319,25 @@ def test_viewer_css_styles_reverify_button_disabled_state():
 
 def test_viewer_css_status_palette_uses_clew_colour_convention():
     text = _viewer_css()
-    # Green for verified, amber for stale, red for contradicted —
-    # matches scitex-clew's VerificationStatus palette so the
-    # in-viewer chips read the same as the static-site claims.html
+    # Green for verified, amber for partial, red for mismatch/missing,
+    # grey for registered/not_found — matches scitex-clew's claim-status
+    # palette so the in-viewer chips read the same as the static-site
+    # claims.html
     assert "#2ea043" in text  # GitHub-style green
     assert "#d29922" in text  # GitHub-style amber
     assert "#f85149" in text  # GitHub-style red
+
+
+def test_viewer_css_failed_verification_renders_red_not_uncoloured():
+    text = _viewer_css()
+    # Regression guard: a mismatch/missing claim (a FAILED verification)
+    # must map to the red var, never fall through to the default border.
+    # This was the original bug — the palette used a vocabulary clew
+    # never emits, so failures rendered uncoloured.
+    assert '.lp-claim[data-status="mismatch"]   { border-left-color: var(--lp-status-mismatch); }' in text
+    assert '.lp-claim[data-status="missing"]    { border-left-color: var(--lp-status-missing); }' in text
+    assert "--lp-status-mismatch:    #f85149;" in text
+    assert "--lp-status-missing:     #f85149;" in text
 
 
 # ──────────────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ that the renderer lands in this PR. Exercises the public contract:
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from scitex_live_paper import bundle as bundle_module
@@ -252,3 +253,35 @@ def test_render_html_alias_returns_equivalent_artifacts(tmp_path: Path):
     # Assert
     assert isinstance(via_alias, ClaimsArtifacts)
     assert via_alias.claims_html == out / "claims.html"
+
+
+# ---------------------------------------------------------------------------
+# Vendored CSS palette — clew claim-status vocabulary
+# ---------------------------------------------------------------------------
+
+
+def test_vendored_css_covers_clew_claim_status_palette(tmp_path: Path):
+    # Arrange
+    loaded = bundle_module.load(BUNDLE_MIN)
+    artifacts = render_claims_sidebar(loaded, tmp_path / "site")
+    css = artifacts.css.read_text(encoding="utf-8")
+    # Assert: one selector per clew claim status (verify_claim / claims.json)
+    for status in ("verified", "partial", "mismatch", "missing", "registered", "not_found"):
+        assert f'.lp-status-dot[data-status="{status}"]' in css
+
+
+def test_vendored_css_failed_verification_renders_red(tmp_path: Path):
+    # Regression guard: mismatch/missing (a FAILED verification) must map
+    # to the red var — the original bug rendered them uncoloured because
+    # the palette used a vocabulary clew never emits.
+    loaded = bundle_module.load(BUNDLE_MIN)
+    artifacts = render_claims_sidebar(loaded, tmp_path / "site")
+    css = artifacts.css.read_text(encoding="utf-8")
+    # red hex bound to both failure statuses (whitespace-insensitive)
+    assert re.search(r"--lp-status-mismatch:\s*#cf222e;", css)
+    assert re.search(r"--lp-status-missing:\s*#cf222e;", css)
+    # the dot selector points at the mismatch var, not the default
+    assert re.search(
+        r'\.lp-status-dot\[data-status="mismatch"\]\s*\{\s*background:\s*var\(--lp-status-mismatch\)',
+        css,
+    )
