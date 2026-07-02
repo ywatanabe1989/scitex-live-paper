@@ -225,11 +225,13 @@ def test_viewer_js_maps_clew_status_to_css_classes(tmp_path: Path):
     # Act
     artifacts = render_viewer(loaded, out)
     js = artifacts.js.read_text(encoding="utf-8")
-    # Assert: the three status colours required by the issue must be
-    # represented in the JS lookup table.
+    # Assert: the clew claim palette v1.3 statuses must be represented
+    # in the JS lookup table (registered/not_found fall through to the
+    # default grey overlay).
     assert "lp-status-verified" in js
-    assert "lp-status-stale" in js
-    assert "lp-status-failed" in js
+    assert "lp-status-suspect" in js
+    assert "lp-status-mismatch" in js
+    assert "lp-status-missing" in js
 
 
 # ---------------------------------------------------------------------------

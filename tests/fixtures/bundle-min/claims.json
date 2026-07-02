@@ -24,7 +24,7 @@
       "source_session": "sess_002",
       "source_file": "scripts/04_stats.R",
       "source_hash": "1234567890abcdef",
-      "status": "stale",
+      "status": "suspect",
       "anchor": {"page": 5, "bbox": [80.0, 120.0, 280.0, 160.0]}
     },
     {

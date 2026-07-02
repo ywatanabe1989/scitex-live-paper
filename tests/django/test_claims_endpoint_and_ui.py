@@ -108,8 +108,9 @@ def test_api_claims_preserves_clew_status_strings(client, env_snapshot):
     _pin(BUNDLE_MIN)
     body = json.loads(client.get("/api/claims").content)
     statuses = sorted(c["status"] for c in body["claims"])
-    # bundle-min fixture: registered / stale / verified
-    assert statuses == ["registered", "stale", "verified"]
+    # bundle-min fixture: registered / suspect / verified (clew v1.3
+    # vocabulary — the fixture mirrors what clew actually emits)
+    assert statuses == ["registered", "suspect", "verified"]
 
 
 def test_api_claims_carries_extras_for_forward_compat(client, env_snapshot):
@@ -268,7 +269,7 @@ def test_viewer_css_defines_status_colour_custom_properties():
     for var in (
         # clew claim-status vocabulary (verify_claim / claims.json)
         "--lp-status-verified",
-        "--lp-status-partial",
+        "--lp-status-suspect",
         "--lp-status-mismatch",
         "--lp-status-missing",
         "--lp-status-registered",
@@ -291,7 +292,7 @@ def test_viewer_css_styles_each_claim_status_via_data_attribute():
     # plus the two transient client-side UI states.
     for status in (
         "verified",
-        "partial",
+        "suspect",
         "mismatch",
         "missing",
         "registered",
@@ -319,25 +320,28 @@ def test_viewer_css_styles_reverify_button_disabled_state():
 
 def test_viewer_css_status_palette_uses_clew_colour_convention():
     text = _viewer_css()
-    # Green for verified, amber for partial, red for mismatch/missing,
-    # grey for registered/not_found — matches scitex-clew's claim-status
-    # palette so the in-viewer chips read the same as the static-site
-    # claims.html
+    # Green for verified, amber for suspect, red for mismatch, dark red
+    # for missing (own hue per clew palette v1.3), grey for
+    # registered/not_found — matches scitex-clew's claim-status palette
+    # so the in-viewer chips read the same as the static-site claims.html
     assert "#2ea043" in text  # GitHub-style green
     assert "#d29922" in text  # GitHub-style amber
     assert "#f85149" in text  # GitHub-style red
+    assert "#a40e26" in text  # clew v1.3 missing-red (distinct from mismatch)
 
 
 def test_viewer_css_failed_verification_renders_red_not_uncoloured():
     text = _viewer_css()
     # Regression guard: a mismatch/missing claim (a FAILED verification)
-    # must map to the red var, never fall through to the default border.
+    # must map to a red var, never fall through to the default border.
     # This was the original bug — the palette used a vocabulary clew
-    # never emits, so failures rendered uncoloured.
+    # never emits, so failures rendered uncoloured. Per clew palette
+    # v1.3 (clew 0.7.0), missing carries its OWN red, distinct from
+    # mismatch.
     assert '.lp-claim[data-status="mismatch"]   { border-left-color: var(--lp-status-mismatch); }' in text
     assert '.lp-claim[data-status="missing"]    { border-left-color: var(--lp-status-missing); }' in text
     assert "--lp-status-mismatch:    #f85149;" in text
-    assert "--lp-status-missing:     #f85149;" in text
+    assert "--lp-status-missing:     #a40e26;" in text
 
 
 # ──────────────────────────────────────────────────────────────────

@@ -77,8 +77,8 @@ def test_info_bundle_min_prints_claim_count():
 
 def test_info_bundle_min_prints_status_palette():
     result = CliRunner().invoke(cli, ["info", str(BUNDLE_MIN)])
-    # bundle-min mixes registered / stale / verified
-    for label in ("registered", "stale", "verified"):
+    # bundle-min mixes registered / suspect / verified (clew v1.3)
+    for label in ("registered", "suspect", "verified"):
         assert label in result.output
 
 
@@ -159,7 +159,7 @@ def test_info_json_carries_required_keys():
 def test_info_json_status_palette_counts():
     result = CliRunner().invoke(cli, ["info", str(BUNDLE_MIN), "--json"])
     palette = json.loads(result.output)["status_palette"]
-    assert palette == {"registered": 1, "stale": 1, "verified": 1}
+    assert palette == {"registered": 1, "suspect": 1, "verified": 1}
 
 
 def test_info_json_paper_state_nested_block():

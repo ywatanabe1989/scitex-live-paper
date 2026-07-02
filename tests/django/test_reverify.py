@@ -369,9 +369,10 @@ def test_reverify_details_aggregates_source_and_chain_verified(client, env_snaps
     ]
 
 
-@pytest.mark.parametrize("status", ["verified", "partial", "mismatch", "missing"])
+@pytest.mark.parametrize("status", ["verified", "suspect", "mismatch", "missing"])
 def test_reverify_extracts_nested_claim_status(client, env_snapshot, fake_scitex_clew, status):
     # status lives at result["claim"]["status"], NOT top-level.
+    # Vocabulary per clew palette v1.3 (clew 0.7.0).
     def recorder(claim_id_or_location):
         return {
             "claim": {
@@ -379,7 +380,7 @@ def test_reverify_extracts_nested_claim_status(client, env_snapshot, fake_scitex
                 "status": status,
                 "verified_at": "2026-06-13T00:00:00Z" if status == "verified" else None,
             },
-            "source_verified": status in {"verified", "partial"},
+            "source_verified": status in {"verified", "suspect"},
             "chain_verified": status == "verified",
             "details": [f"status is {status}"],
         }
@@ -395,6 +396,32 @@ def test_reverify_extracts_nested_claim_status(client, env_snapshot, fake_scitex
     body = json.loads(response.content)
     assert body["ok"] is True
     assert body["status"] == status
+
+
+def test_reverify_normalizes_legacy_partial_to_suspect(client, env_snapshot, fake_scitex_clew):
+    # clew 0.7.0 renamed "partial" → "suspect" (same semantic state). A
+    # host running an older clew still emits "partial"; the handler must
+    # surface it as "suspect" so the SPA palette only sees the v1.3
+    # vocabulary (mirrors clew's own read-time normalization).
+    def recorder(claim_id_or_location):
+        return {
+            "claim": {"claim_id": claim_id_or_location, "status": "partial"},
+            "source_verified": True,
+            "chain_verified": False,
+            "details": ["source ok, chain unverified"],
+        }
+
+    fake_scitex_clew.verify_claim = recorder
+    _pin(BUNDLE_ACCEPTED)
+
+    response = client.post(
+        "/api/claim/verify",
+        data=json.dumps({"claim_id": "claim_a"}),
+        content_type="application/json",
+    )
+    body = json.loads(response.content)
+    assert body["ok"] is True
+    assert body["status"] == "suspect"
 
 
 def test_reverify_not_found_result_is_ok_false(client, env_snapshot, fake_scitex_clew):

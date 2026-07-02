@@ -13,9 +13,9 @@
   --lp-border: #d0d7de;
 
   --lp-status-verified:  #2da44e;
-  --lp-status-partial:   #d29922;
+  --lp-status-suspect:   #d29922;
   --lp-status-mismatch:  #cf222e;
-  --lp-status-missing:   #cf222e;
+  --lp-status-missing:   #a40e26;
   --lp-status-registered:#6e7781;
   --lp-status-not_found: #6e7781;
   --lp-status-default:   #6e7781;
@@ -150,18 +150,20 @@ body.live-paper {
 }
 
 /* Status colours: ONE selector per clew claim status string.
- * Vocabulary owned by scitex-clew verify_claim / claims.json:
- *   verified→green, partial→amber, mismatch/missing→red,
- *   registered/not_found→grey. (The M4 re-review badge + the DAG-node
- *   "suspect" path use SEPARATE vocabularies — not these selectors.) */
+ * Vocabulary owned by scitex-clew (palette v1.3, clew 0.7.0):
+ *   verified→green, suspect→amber, mismatch→red, missing→dark red
+ *   (own hue, distinct from mismatch), registered/not_found→grey.
+ * Legacy "partial" is normalized to "suspect" at bundle ingest.
+ * (The M4 re-review badge vocabulary is SEPARATE — not these
+ * selectors.) */
 .lp-status-dot[data-status="verified"]              { background: var(--lp-status-verified); }
-.lp-status-dot[data-status="partial"]               { background: var(--lp-status-partial); }
+.lp-status-dot[data-status="suspect"]               { background: var(--lp-status-suspect); }
 .lp-status-dot[data-status="mismatch"]              { background: var(--lp-status-mismatch); }
 .lp-status-dot[data-status="missing"]               { background: var(--lp-status-missing); }
 .lp-status-dot[data-status="registered"]            { background: var(--lp-status-registered); }
 .lp-status-dot[data-status="not_found"]             { background: var(--lp-status-not_found); }
 .lp-claim-detail dd[data-status="verified"]         { color: var(--lp-status-verified); font-weight: 600; }
-.lp-claim-detail dd[data-status="partial"]          { color: var(--lp-status-partial);  font-weight: 600; }
+.lp-claim-detail dd[data-status="suspect"]          { color: var(--lp-status-suspect);  font-weight: 600; }
 .lp-claim-detail dd[data-status="mismatch"]         { color: var(--lp-status-mismatch); font-weight: 600; }
 .lp-claim-detail dd[data-status="missing"]          { color: var(--lp-status-missing);  font-weight: 600; }
 .lp-claim-detail dd[data-status="registered"]       { color: var(--lp-status-registered); }

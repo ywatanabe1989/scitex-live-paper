@@ -9,10 +9,15 @@
  * file. Paths are passed in as data-* attributes on #live-paper-pdf-host.
  */
 
+/* Claim-status → overlay class. Vocabulary owned by scitex-clew
+ * (palette v1.3, clew 0.7.0). registered / not_found fall through to
+ * the default grey overlay. Legacy "partial" is normalized to
+ * "suspect" at bundle ingest, so it never reaches this map. */
 const STATUS_CLASS = {
   verified: 'lp-status-verified',
-  stale:    'lp-status-stale',
-  failed:   'lp-status-failed',
+  suspect:  'lp-status-suspect',
+  mismatch: 'lp-status-mismatch',
+  missing:  'lp-status-missing',
 };
 
 function classFor(status) {

@@ -122,7 +122,7 @@ def test_html_marks_status_as_clew_owned_string(tmp_path: Path):
     # Assert: the raw clew status strings flow through as data-status
     # (NOT a hand-rolled enum) so the CSS palette is the single source.
     assert 'data-status="verified"' in html
-    assert 'data-status="stale"' in html
+    assert 'data-status="suspect"' in html
     assert 'data-status="registered"' in html
 
 
@@ -266,7 +266,7 @@ def test_vendored_css_covers_clew_claim_status_palette(tmp_path: Path):
     artifacts = render_claims_sidebar(loaded, tmp_path / "site")
     css = artifacts.css.read_text(encoding="utf-8")
     # Assert: one selector per clew claim status (verify_claim / claims.json)
-    for status in ("verified", "partial", "mismatch", "missing", "registered", "not_found"):
+    for status in ("verified", "suspect", "mismatch", "missing", "registered", "not_found"):
         assert f'.lp-status-dot[data-status="{status}"]' in css
 
 
@@ -279,7 +279,8 @@ def test_vendored_css_failed_verification_renders_red(tmp_path: Path):
     css = artifacts.css.read_text(encoding="utf-8")
     # red hex bound to both failure statuses (whitespace-insensitive)
     assert re.search(r"--lp-status-mismatch:\s*#cf222e;", css)
-    assert re.search(r"--lp-status-missing:\s*#cf222e;", css)
+    # clew palette v1.3: missing has its OWN red, distinct from mismatch
+    assert re.search(r"--lp-status-missing:\s*#a40e26;", css)
     # the dot selector points at the mismatch var, not the default
     assert re.search(
         r'\.lp-status-dot\[data-status="mismatch"\]\s*\{\s*background:\s*var\(--lp-status-mismatch\)',

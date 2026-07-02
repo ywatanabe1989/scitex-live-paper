@@ -72,7 +72,12 @@ def handle_reverify(request) -> HttpResponse:
             "ok": true,
             "claim_id": "...",
             "verified_against": "<commit>",               # metadata echo
-            "status": "verified" | "partial" | "mismatch" | "missing",
+            "status": "verified" | "suspect" | "mismatch" | "missing",
+                                                           # (clew ≥0.7.0;
+                                                           # older clews may
+                                                           # return the
+                                                           # pre-rename
+                                                           # "partial")
             "verified_at": "<ISO-8601>" | null,           # from claim
             "details": {...}                              # source_verified,
                                                            # chain_verified,
@@ -229,6 +234,13 @@ def _normalize_result(
         if not isinstance(claim, dict):
             claim = {}
         status = str(claim.get("status", ""))
+        # clew 0.7.0 renamed "partial" → "suspect" (same state). A host
+        # running an older clew still emits "partial" — normalize here,
+        # mirroring clew's own read-time behaviour and the bundle
+        # loader's ingest normalization, so the SPA palette only ever
+        # sees the v1.3 vocabulary.
+        if status == "partial":
+            status = "suspect"
         verified_at = claim.get("verified_at")
         # details = every top-level key except "claim", plus every claim
         # key except the two we promote (status/verified_at). Keep

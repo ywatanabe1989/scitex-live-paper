@@ -11,13 +11,17 @@
   --lp-fg: #111;
   --lp-muted: #555;
   --lp-border: #d0d7de;
+  /* Overlay tints follow the clew claim palette v1.3 (clew 0.7.0):
+   * suspect→amber, mismatch→red, missing→dark red (own hue). */
   --lp-overlay-default: rgba(180, 180, 180, 0.35);
   --lp-overlay-verified: rgba(46, 160, 67, 0.30);
-  --lp-overlay-stale:    rgba(219, 154, 4, 0.32);
-  --lp-overlay-failed:   rgba(207, 34, 46, 0.32);
+  --lp-overlay-suspect:  rgba(219, 154, 4, 0.32);
+  --lp-overlay-mismatch: rgba(207, 34, 46, 0.32);
+  --lp-overlay-missing:  rgba(164, 14, 38, 0.32);
   --lp-overlay-border-verified: #2da44e;
-  --lp-overlay-border-stale:    #d29922;
-  --lp-overlay-border-failed:   #cf222e;
+  --lp-overlay-border-suspect:  #d29922;
+  --lp-overlay-border-mismatch: #cf222e;
+  --lp-overlay-border-missing:  #a40e26;
   --lp-overlay-border-default:  #6e7781;
 }
 
@@ -87,13 +91,17 @@ body.live-paper {
   background: var(--lp-overlay-verified);
   border-color: var(--lp-overlay-border-verified);
 }
-.lp-claim-anchor.lp-status-stale {
-  background: var(--lp-overlay-stale);
-  border-color: var(--lp-overlay-border-stale);
+.lp-claim-anchor.lp-status-suspect {
+  background: var(--lp-overlay-suspect);
+  border-color: var(--lp-overlay-border-suspect);
 }
-.lp-claim-anchor.lp-status-failed {
-  background: var(--lp-overlay-failed);
-  border-color: var(--lp-overlay-border-failed);
+.lp-claim-anchor.lp-status-mismatch {
+  background: var(--lp-overlay-mismatch);
+  border-color: var(--lp-overlay-border-mismatch);
+}
+.lp-claim-anchor.lp-status-missing {
+  background: var(--lp-overlay-missing);
+  border-color: var(--lp-overlay-border-missing);
 }
 
 .lp-claim-anchor:hover,

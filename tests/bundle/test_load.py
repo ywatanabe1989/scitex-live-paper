@@ -263,6 +263,35 @@ def test_claim_from_dict_raises_on_non_mapping_input():
         Claim.from_dict(payload)  # type: ignore[arg-type]
 
 
+def test_claim_from_dict_normalizes_legacy_partial_to_suspect():
+    # clew 0.7.0 (palette v1.3) renamed "partial" → "suspect" (same
+    # semantic state). clew's own read path normalizes legacy rows; a
+    # pre-0.7.0 claims.json is a snapshot, so ingest applies the same
+    # normalization (confirmed with the clew owner).
+    payload = {
+        "claim_id": "claim_legacy",
+        "file_path": "main.tex",
+        "claim_type": "value",
+        "status": "partial",
+    }
+    claim = Claim.from_dict(payload)
+    assert claim.status == "suspect"
+
+
+def test_claim_from_dict_passes_v13_statuses_through_unchanged():
+    # The v1.3 vocabulary itself must NOT be rewritten by the normalizer.
+    for status in ("verified", "suspect", "mismatch", "missing", "registered"):
+        claim = Claim.from_dict(
+            {
+                "claim_id": f"claim_{status}",
+                "file_path": "main.tex",
+                "claim_type": "value",
+                "status": status,
+            }
+        )
+        assert claim.status == status
+
+
 def test_bundle_module_exposes_public_api():
     # Arrange
     expected = {"Bundle", "BundleError", "Claim", "load"}

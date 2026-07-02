@@ -152,14 +152,16 @@ body {
  * ────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Claim-status palette (clew verify_claim / claims.json vocabulary):
-   * verified→green, partial→amber, mismatch/missing→red,
-   * registered/not_found→grey. Dark-theme hex variants of the static
-   * renderer's light-theme palette — same semantics. */
+  /* Claim-status palette (clew palette v1.3, clew 0.7.0):
+   * verified→green, suspect→amber, mismatch→red, missing→dark red
+   * (own canonical hue a40e26, distinct from mismatch),
+   * registered/not_found→grey. Legacy "partial" is normalized to
+   * "suspect" at bundle ingest. verified/mismatch use dark-theme
+   * variants of the static renderer's light-theme hexes. */
   --lp-status-verified:    #2ea043;
-  --lp-status-partial:     #d29922;
+  --lp-status-suspect:     #d29922;
   --lp-status-mismatch:    #f85149;
-  --lp-status-missing:     #f85149;
+  --lp-status-missing:     #a40e26;
   --lp-status-registered:  #6e7681;
   --lp-status-not_found:   #6e7681;
   /* Transient client-side UI states (NOT clew statuses). */
@@ -204,7 +206,7 @@ body {
 }
 
 .lp-claim[data-status="verified"]   { border-left-color: var(--lp-status-verified); }
-.lp-claim[data-status="partial"]    { border-left-color: var(--lp-status-partial); }
+.lp-claim[data-status="suspect"]    { border-left-color: var(--lp-status-suspect); }
 .lp-claim[data-status="mismatch"]   { border-left-color: var(--lp-status-mismatch); }
 .lp-claim[data-status="missing"]    { border-left-color: var(--lp-status-missing); }
 .lp-claim[data-status="registered"] { border-left-color: var(--lp-status-registered); }
@@ -242,7 +244,7 @@ body {
 }
 
 .lp-claim-status[data-status="verified"]   { background: var(--lp-status-verified); }
-.lp-claim-status[data-status="partial"]    { background: var(--lp-status-partial); }
+.lp-claim-status[data-status="suspect"]    { background: var(--lp-status-suspect); }
 .lp-claim-status[data-status="mismatch"]   { background: var(--lp-status-mismatch); }
 .lp-claim-status[data-status="missing"]    { background: var(--lp-status-missing); }
 .lp-claim-status[data-status="registered"] { background: var(--lp-status-registered); }

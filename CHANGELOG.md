@@ -30,6 +30,18 @@ may change without a changelog entry.
   host/deployment owns checking out the commit and pointing clew's DB
   via `SCITEX_CLEW_DB_PATH` before serving — these handlers never
   mutate the working tree.
+- Claim-status colour palette (static `claims.css` + SPA `viewer.css`)
+  aligned to clew's canonical claim vocabulary — palette v1.3
+  (clew 0.7.0): `verified`→green, `suspect`→amber, `mismatch`→red,
+  `missing`→its own dark red (`#a40e26`, distinct from mismatch),
+  `registered`/`not_found`→grey. Previously the palettes keyed on
+  statuses clew never emits (`stale`/`failed`/`contradicted` as claim
+  statuses), so failed verifications rendered uncoloured. Legacy
+  `partial` (pre-0.7.0 exports / older installed clews) is normalized
+  to `suspect` at bundle ingest and in the re-verify envelope,
+  mirroring clew's own read-time behaviour. The M4 `ReReviewBadge`
+  vocabulary (`verified`/`concerns`/`contradicted`/`stale`) is
+  separate and unchanged.
 
 ## [0.1.0] — 2026-06-13
 
