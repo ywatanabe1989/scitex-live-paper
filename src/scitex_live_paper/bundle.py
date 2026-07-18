@@ -140,6 +140,13 @@ class Claim:
                 raise BundleError(f"claim entry missing required field: {required!r}")
         typed = {k: v for k, v in data.items() if k in _CLAIM_TYPED_FIELDS}
         extras = {k: v for k, v in data.items() if k not in _CLAIM_TYPED_FIELDS}
+        # clew 0.7.0 (palette v1.3) renamed the claim status "partial" to
+        # "suspect" — same semantic state (source verified, chain not).
+        # clew's own read path normalizes legacy rows at read time; a
+        # pre-0.7.0 claims.json is a serialized snapshot, so we apply the
+        # same normalization at ingest (confirmed with the clew owner).
+        if typed.get("status") == "partial":
+            typed["status"] = "suspect"
         return cls(**typed, extras=extras)
 
 

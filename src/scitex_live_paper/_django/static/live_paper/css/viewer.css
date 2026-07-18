@@ -152,13 +152,25 @@ body {
  * ────────────────────────────────────────────────────────────────── */
 
 :root {
+  /* Claim-status palette (clew palette v1.3, clew 0.7.0):
+   * verified→green, suspect→amber, mismatch→red, missing→dark red
+   * (own canonical hue a40e26, distinct from mismatch),
+   * registered/not_found→grey. Legacy "partial" is normalized to
+   * "suspect" at bundle ingest. verified/mismatch use dark-theme
+   * variants of the static renderer's light-theme hexes. */
   --lp-status-verified:    #2ea043;
-  --lp-status-stale:       #d29922;
-  --lp-status-contradicted: #f85149;
+  --lp-status-suspect:     #d29922;
+  --lp-status-mismatch:    #f85149;
+  --lp-status-missing:     #a40e26;
   --lp-status-registered:  #6e7681;
+  --lp-status-not_found:   #6e7681;
+  /* Transient client-side UI states (NOT clew statuses). */
   --lp-status-error:       #f85149;
   --lp-status-verifying:   #58a6ff;
   --lp-status-fallback:    #a0a0b0;
+  /* M4 re-review BADGE vocabulary (paper-level, separate from claims). */
+  --lp-status-stale:       #d29922;
+  --lp-status-contradicted: #f85149;
 }
 
 .live-paper-claims {
@@ -193,11 +205,14 @@ body {
   border-left: 3px solid var(--lp-status-registered);
 }
 
-.lp-claim[data-status="verified"]     { border-left-color: var(--lp-status-verified); }
-.lp-claim[data-status="stale"]        { border-left-color: var(--lp-status-stale); }
-.lp-claim[data-status="contradicted"] { border-left-color: var(--lp-status-contradicted); }
-.lp-claim[data-status="verifying"]    { border-left-color: var(--lp-status-verifying); }
-.lp-claim[data-status="error"]        { border-left-color: var(--lp-status-error); }
+.lp-claim[data-status="verified"]   { border-left-color: var(--lp-status-verified); }
+.lp-claim[data-status="suspect"]    { border-left-color: var(--lp-status-suspect); }
+.lp-claim[data-status="mismatch"]   { border-left-color: var(--lp-status-mismatch); }
+.lp-claim[data-status="missing"]    { border-left-color: var(--lp-status-missing); }
+.lp-claim[data-status="registered"] { border-left-color: var(--lp-status-registered); }
+.lp-claim[data-status="not_found"]  { border-left-color: var(--lp-status-not_found); }
+.lp-claim[data-status="verifying"]  { border-left-color: var(--lp-status-verifying); }
+.lp-claim[data-status="error"]      { border-left-color: var(--lp-status-error); }
 
 .lp-claim-id {
   grid-column: 1 / 2;
@@ -228,11 +243,14 @@ body {
   background: var(--lp-status-registered);
 }
 
-.lp-claim-status[data-status="verified"]     { background: var(--lp-status-verified); }
-.lp-claim-status[data-status="stale"]        { background: var(--lp-status-stale); }
-.lp-claim-status[data-status="contradicted"] { background: var(--lp-status-contradicted); }
-.lp-claim-status[data-status="verifying"]    { background: var(--lp-status-verifying); }
-.lp-claim-status[data-status="error"]        { background: var(--lp-status-error); }
+.lp-claim-status[data-status="verified"]   { background: var(--lp-status-verified); }
+.lp-claim-status[data-status="suspect"]    { background: var(--lp-status-suspect); }
+.lp-claim-status[data-status="mismatch"]   { background: var(--lp-status-mismatch); }
+.lp-claim-status[data-status="missing"]    { background: var(--lp-status-missing); }
+.lp-claim-status[data-status="registered"] { background: var(--lp-status-registered); }
+.lp-claim-status[data-status="not_found"]  { background: var(--lp-status-not_found); }
+.lp-claim-status[data-status="verifying"]  { background: var(--lp-status-verifying); }
+.lp-claim-status[data-status="error"]      { background: var(--lp-status-error); }
 
 .lp-claim-reverify {
   grid-column: 3 / 4;

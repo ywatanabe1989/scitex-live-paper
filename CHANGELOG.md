@@ -16,7 +16,32 @@ may change without a changelog entry.
 
 ## [Unreleased]
 
-(Nothing yet.)
+### Fixed
+
+- M2 re-verify handlers (`api/claim/verify` + `api/claims/verify`) now
+  call clew's real `verify_claim(claim_id_or_location)` signature — a
+  single positional arg — instead of the non-existent
+  `verify_claim(claim_id=, against=, bundle_root=)` kwargs that 500'd
+  against a real `scitex-clew` install. The response now reads the
+  nested `result["claim"]["status"]` / `["verified_at"]` (clew's real
+  shape) instead of absent top-level keys, and maps clew's flat
+  `not_found` result to `ok: false`. `pinned_commit` is now metadata
+  only (echoed as `verified_against`): clew is git-agnostic, so the
+  host/deployment owns checking out the commit and pointing clew's DB
+  via `SCITEX_CLEW_DB_PATH` before serving — these handlers never
+  mutate the working tree.
+- Claim-status colour palette (static `claims.css` + SPA `viewer.css`)
+  aligned to clew's canonical claim vocabulary — palette v1.3
+  (clew 0.7.0): `verified`→green, `suspect`→amber, `mismatch`→red,
+  `missing`→its own dark red (`#a40e26`, distinct from mismatch),
+  `registered`/`not_found`→grey. Previously the palettes keyed on
+  statuses clew never emits (`stale`/`failed`/`contradicted` as claim
+  statuses), so failed verifications rendered uncoloured. Legacy
+  `partial` (pre-0.7.0 exports / older installed clews) is normalized
+  to `suspect` at bundle ingest and in the re-verify envelope,
+  mirroring clew's own read-time behaviour. The M4 `ReReviewBadge`
+  vocabulary (`verified`/`concerns`/`contradicted`/`stale`) is
+  separate and unchanged.
 
 ## [0.1.0] — 2026-06-13
 

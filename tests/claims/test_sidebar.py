@@ -14,6 +14,7 @@ that the renderer lands in this PR. Exercises the public contract:
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from scitex_live_paper import bundle as bundle_module
@@ -121,7 +122,7 @@ def test_html_marks_status_as_clew_owned_string(tmp_path: Path):
     # Assert: the raw clew status strings flow through as data-status
     # (NOT a hand-rolled enum) so the CSS palette is the single source.
     assert 'data-status="verified"' in html
-    assert 'data-status="stale"' in html
+    assert 'data-status="suspect"' in html
     assert 'data-status="registered"' in html
 
 
@@ -252,3 +253,36 @@ def test_render_html_alias_returns_equivalent_artifacts(tmp_path: Path):
     # Assert
     assert isinstance(via_alias, ClaimsArtifacts)
     assert via_alias.claims_html == out / "claims.html"
+
+
+# ---------------------------------------------------------------------------
+# Vendored CSS palette — clew claim-status vocabulary
+# ---------------------------------------------------------------------------
+
+
+def test_vendored_css_covers_clew_claim_status_palette(tmp_path: Path):
+    # Arrange
+    loaded = bundle_module.load(BUNDLE_MIN)
+    artifacts = render_claims_sidebar(loaded, tmp_path / "site")
+    css = artifacts.css.read_text(encoding="utf-8")
+    # Assert: one selector per clew claim status (verify_claim / claims.json)
+    for status in ("verified", "suspect", "mismatch", "missing", "registered", "not_found"):
+        assert f'.lp-status-dot[data-status="{status}"]' in css
+
+
+def test_vendored_css_failed_verification_renders_red(tmp_path: Path):
+    # Regression guard: mismatch/missing (a FAILED verification) must map
+    # to the red var — the original bug rendered them uncoloured because
+    # the palette used a vocabulary clew never emits.
+    loaded = bundle_module.load(BUNDLE_MIN)
+    artifacts = render_claims_sidebar(loaded, tmp_path / "site")
+    css = artifacts.css.read_text(encoding="utf-8")
+    # red hex bound to both failure statuses (whitespace-insensitive)
+    assert re.search(r"--lp-status-mismatch:\s*#cf222e;", css)
+    # clew palette v1.3: missing has its OWN red, distinct from mismatch
+    assert re.search(r"--lp-status-missing:\s*#a40e26;", css)
+    # the dot selector points at the mismatch var, not the default
+    assert re.search(
+        r'\.lp-status-dot\[data-status="mismatch"\]\s*\{\s*background:\s*var\(--lp-status-mismatch\)',
+        css,
+    )

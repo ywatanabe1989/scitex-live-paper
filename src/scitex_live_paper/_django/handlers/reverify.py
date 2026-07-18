@@ -1,7 +1,18 @@
 """M2 re-verify endpoints — single (``api/claim/verify``) + bulk (``api/claims/verify``).
 
-Both call ``scitex_clew.verify_claim()`` against the bundle's pinned
-commit and return the resulting :class:`~scitex_clew.VerificationStatus`.
+Both call ``scitex_clew.verify_claim(claim_id_or_location)`` — a single
+positional argument — and read the nested ``result["claim"]["status"]``
+that clew returns.
+
+clew is git-agnostic: ``verify_claim`` re-hashes the claim's source file
+against the CURRENT on-disk state of clew's project (it resolves its DB
+via ``SCITEX_CLEW_DB_PATH`` or by walking up to
+``.scitex/clew/runtime/db.sqlite``). It does NOT take a commit and does
+NOT check out git. ``pinned_commit`` is therefore METADATA only here —
+to re-verify against a specific commit, the host/deployment is
+responsible for checking out that commit and pointing clew's DB via
+``SCITEX_CLEW_DB_PATH`` before serving. These handlers never mutate the
+working tree.
 
 Boundary unchanged: ``scitex-clew`` owns the claim model + the verify
 operation. These handlers are thin pass-throughs. When ``scitex-clew``
@@ -31,7 +42,15 @@ __all__ = ["handle_reverify", "handle_reverify_all"]
 
 
 def handle_reverify(request) -> HttpResponse:
-    """Re-verify a single claim against the bundle's pinned commit.
+    """Re-verify a single claim via clew's live ``verify_claim``.
+
+    live-paper verifies the claim against the CURRENT on-disk state of
+    clew's project. To re-verify against a specific commit, the
+    host/deployment is responsible for checking out ``pinned_commit``
+    and pointing clew's DB via ``SCITEX_CLEW_DB_PATH`` before serving.
+    This handler never mutates the working tree — ``pinned_commit`` is
+    accepted and echoed back as ``verified_against`` metadata only, and
+    is NOT passed to ``verify_claim``.
 
     Request
     -------
@@ -52,11 +71,18 @@ def handle_reverify(request) -> HttpResponse:
         {
             "ok": true,
             "claim_id": "...",
-            "verified_against": "<commit>",
-            "status": "verified" | "stale" | "contradicted",
-            "verified_at": "<ISO-8601>",
-            "details": {...}                              # passes through
-                                                           # what clew returns
+            "verified_against": "<commit>",               # metadata echo
+            "status": "verified" | "suspect" | "mismatch" | "missing",
+                                                           # (clew ≥0.7.0;
+                                                           # older clews may
+                                                           # return the
+                                                           # pre-rename
+                                                           # "partial")
+            "verified_at": "<ISO-8601>" | null,           # from claim
+            "details": {...}                              # source_verified,
+                                                           # chain_verified,
+                                                           # details list +
+                                                           # rest of claim
         }
 
     On graceful degradation (``scitex-clew`` not installed)::
@@ -156,11 +182,10 @@ def handle_reverify(request) -> HttpResponse:
         )
 
     try:
-        result = verify_claim(
-            claim_id=claim_id,
-            against=pinned_commit,
-            bundle_root=str(bundle.root),
-        )
+        # clew takes a SINGLE positional arg and verifies against the
+        # current on-disk state. pinned_commit is metadata only — the
+        # host owns checkout + SCITEX_CLEW_DB_PATH (see module docstring).
+        result = verify_claim(claim_id)
     except Exception as exc:
         logger.exception("[re-verify] clew.verify_claim raised for %s", claim_id)
         return JsonResponse(
@@ -192,32 +217,66 @@ def _normalize_result(
 ) -> Mapping[str, Any]:
     """Shape clew's return value into our stable response envelope.
 
+    clew's real success shape nests the claim under ``result["claim"]``
+    (with ``status`` + ``verified_at`` inside it) alongside top-level
+    ``source_verified`` / ``chain_verified`` / ``details``. The
+    not-found shape is a flat ``{"status": "not_found", "message": ...}``
+    with NO ``"claim"`` key.
+
     Forward-compatible: any extra keys clew returns flow through under
     ``details`` rather than being merged into the top level, so adding
     fields upstream never silently changes the contract this endpoint
-    promises.
+    promises. ``verified_against`` is the ``pinned_commit`` metadata
+    echo — clew is git-agnostic and never receives it.
     """
-    if not isinstance(result, dict):
-        # Some clew versions may return a dataclass / enum. Stringify.
+    if isinstance(result, dict) and "claim" in result:
+        claim = result["claim"]
+        if not isinstance(claim, dict):
+            claim = {}
+        status = str(claim.get("status", ""))
+        # clew 0.7.0 renamed "partial" → "suspect" (same state). A host
+        # running an older clew still emits "partial" — normalize here,
+        # mirroring clew's own read-time behaviour and the bundle
+        # loader's ingest normalization, so the SPA palette only ever
+        # sees the v1.3 vocabulary.
+        if status == "partial":
+            status = "suspect"
+        verified_at = claim.get("verified_at")
+        # details = every top-level key except "claim", plus every claim
+        # key except the two we promote (status/verified_at). Keep
+        # unknown keys for forward-compat.
+        details: dict = {k: v for k, v in result.items() if k != "claim"}
+        details.update(
+            {k: v for k, v in claim.items() if k not in {"status", "verified_at"}}
+        )
         return {
             "ok": True,
             "claim_id": claim_id,
             "verified_against": pinned_commit,
-            "status": str(result),
-            "details": {},
+            "status": status,
+            "verified_at": verified_at,
+            "details": details,
         }
 
+    if isinstance(result, dict) and "status" in result:
+        # not_found case: flat dict, no "claim" key.
+        return {
+            "ok": False,
+            "claim_id": claim_id,
+            "verified_against": pinned_commit,
+            "status": str(result.get("status")),
+            "verified_at": None,
+            "details": result.get("message"),
+        }
+
+    # Non-dict (e.g. an enum/dataclass from an old clew). Stringify.
     return {
         "ok": True,
         "claim_id": claim_id,
         "verified_against": pinned_commit,
-        "status": str(result.get("status", "")),
-        "verified_at": result.get("verified_at"),
-        "details": {
-            k: v
-            for k, v in result.items()
-            if k not in {"status", "verified_at"}
-        },
+        "status": str(result),
+        "verified_at": None,
+        "details": {},
     }
 
 
@@ -227,7 +286,15 @@ def _normalize_result(
 
 
 def handle_reverify_all(request) -> HttpResponse:
-    """Re-verify every claim in the bundle (or a subset).
+    """Re-verify every claim in the bundle (or a subset) via clew.
+
+    live-paper verifies each claim against the CURRENT on-disk state of
+    clew's project. To re-verify against a specific commit, the
+    host/deployment is responsible for checking out ``pinned_commit``
+    and pointing clew's DB via ``SCITEX_CLEW_DB_PATH`` before serving.
+    This handler never mutates the working tree — ``pinned_commit`` is
+    accepted and echoed back as ``verified_against`` metadata only, and
+    is NOT passed to ``verify_claim``.
 
     Request
     -------
@@ -365,12 +432,14 @@ def handle_reverify_all(request) -> HttpResponse:
             continue
 
         try:
-            raw = clew.verify_claim(
-                claim_id=claim_id,
-                against=pinned_commit,
-                bundle_root=str(bundle.root),
-            )
-            results.append(_normalize_result(claim_id, pinned_commit, raw))
+            # SINGLE positional arg; pinned_commit is metadata only.
+            raw = clew.verify_claim(claim_id)
+            envelope = _normalize_result(claim_id, pinned_commit, raw)
+            results.append(envelope)
+            # A resolved-but-not_found claim normalizes to ok=False; it
+            # must flip the overall sweep to incomplete.
+            if not envelope.get("ok", False):
+                all_ok = False
         except Exception as exc:
             logger.exception(
                 "[re-verify-all] clew.verify_claim raised for %s", claim_id,

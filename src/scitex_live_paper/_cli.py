@@ -289,14 +289,19 @@ def _print_human_summary(payload: dict) -> None:
     )
 
 
-# Mirrors scitex-clew's VerificationStatus palette. Used by `validate`
-# to flag claims whose status isn't a recognised lifecycle value (a
-# common operator footgun: a hand-edit typo like ``"verfied"``).
+# Mirrors scitex-clew's claim-status vocabulary (palette v1.3,
+# clew 0.7.0). Used by `validate` to flag claims whose status isn't a
+# recognised lifecycle value (a common operator footgun: a hand-edit
+# typo like ``"verfied"``). Legacy "partial" never reaches this check —
+# ``bundle.load()`` normalizes it to "suspect" at ingest. ``not_found``
+# is a lookup verdict, never a resting claims.json status, so it is
+# deliberately absent.
 _KNOWN_CLAIM_STATUSES = frozenset({
     "registered",
     "verified",
-    "stale",
-    "contradicted",
+    "suspect",
+    "mismatch",
+    "missing",
 })
 
 
