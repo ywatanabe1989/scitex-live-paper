@@ -290,18 +290,28 @@ def _print_human_summary(payload: dict) -> None:
 
 
 # Mirrors scitex-clew's claim-status vocabulary (palette v1.3,
-# clew 0.7.0). Used by `validate` to flag claims whose status isn't a
+# clew 0.7.0; ``unsourced`` added by clew 0.8.1 / claims.json 1.4).
+# Used by `validate` to flag claims whose status isn't a
 # recognised lifecycle value (a common operator footgun: a hand-edit
 # typo like ``"verfied"``). Legacy "partial" never reaches this check —
 # ``bundle.load()`` normalizes it to "suspect" at ingest. ``not_found``
 # is a lookup verdict, never a resting claims.json status, so it is
 # deliberately absent.
+#
+# ``unsourced`` IS a resting status and so belongs here. It renders in
+# the amber/suspect colour, but that fold happens purely in the colour
+# layer — the status string itself stays "unsourced" everywhere,
+# including in this validation set. Normalizing it to "suspect" at
+# ingest (the way "partial" is) would be wrong: "partial" was a rename
+# with no surviving concept, whereas "unsourced" is a distinct state
+# the operator still needs to read.
 _KNOWN_CLAIM_STATUSES = frozenset({
     "registered",
     "verified",
     "suspect",
     "mismatch",
     "missing",
+    "unsourced",
 })
 
 

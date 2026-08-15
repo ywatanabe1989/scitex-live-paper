@@ -14,22 +14,27 @@
  * the default grey overlay. Legacy "partial" is normalized to
  * "suspect" at bundle ingest, so it never reaches this map. */
 const STATUS_CLASS = {
-  verified: 'lp-status-verified',
-  suspect:  'lp-status-suspect',
-  mismatch: 'lp-status-mismatch',
-  missing:  'lp-status-missing',
+  verified: "lp-status-verified",
+  suspect: "lp-status-suspect",
+  mismatch: "lp-status-mismatch",
+  missing: "lp-status-missing",
+  // clew 1.4 "unsourced" folds into the amber bucket, so it maps onto
+  // the SUSPECT class rather than getting one of its own. Here the
+  // class is purely a colour selector — the status word itself is
+  // rendered verbatim by the sidebar, so folding the hue costs no
+  // information. Without this entry classFor() returns '' and an
+  // unsourced anchor draws unstyled.
+  unsourced: "lp-status-suspect",
 };
 
 function classFor(status) {
-  return STATUS_CLASS[(status || '').toLowerCase()] || '';
+  return STATUS_CLASS[(status || "").toLowerCase()] || "";
 }
 
 function emitClaimEvent(id) {
   // The event channel is documented in README ("MVP loop"); the claims
   // sidebar (M1-3) subscribes to it.
-  window.dispatchEvent(
-    new CustomEvent('live-paper:claim', { detail: { id } })
-  );
+  window.dispatchEvent(new CustomEvent("live-paper:claim", { detail: { id } }));
 }
 
 /**
@@ -40,20 +45,20 @@ async function renderPage(pdfDoc, pageNumber, scale) {
   const page = await pdfDoc.getPage(pageNumber);
   const viewport = page.getViewport({ scale });
 
-  const pageEl = document.createElement('div');
-  pageEl.className = 'lp-page';
+  const pageEl = document.createElement("div");
+  pageEl.className = "lp-page";
   pageEl.dataset.page = String(pageNumber);
   pageEl.style.width = `${viewport.width}px`;
   pageEl.style.height = `${viewport.height}px`;
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = viewport.width;
   canvas.height = viewport.height;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   pageEl.appendChild(canvas);
 
-  const overlay = document.createElement('div');
-  overlay.className = 'lp-overlay';
+  const overlay = document.createElement("div");
+  overlay.className = "lp-overlay";
   pageEl.appendChild(overlay);
 
   await page.render({ canvasContext: ctx, viewport }).promise;
@@ -68,9 +73,9 @@ async function renderPage(pdfDoc, pageNumber, scale) {
 function pdfBboxToCssRect(viewport, bbox) {
   const [vx0, vy0, vx1, vy1] = viewport.convertToViewportRectangle(bbox);
   const left = Math.min(vx0, vx1);
-  const top  = Math.min(vy0, vy1);
-  const w    = Math.abs(vx1 - vx0);
-  const h    = Math.abs(vy1 - vy0);
+  const top = Math.min(vy0, vy1);
+  const w = Math.abs(vx1 - vx0);
+  const h = Math.abs(vy1 - vy0);
   return { left, top, w, h };
 }
 
@@ -79,18 +84,18 @@ function paintAnchor(overlay, viewport, claim) {
   if (!a || !Array.isArray(a.bbox) || a.bbox.length !== 4) return;
   const rect = pdfBboxToCssRect(viewport, a.bbox);
 
-  const el = document.createElement('button');
-  el.type = 'button';
+  const el = document.createElement("button");
+  el.type = "button";
   el.className = `lp-claim-anchor ${classFor(claim.status)}`;
   el.dataset.claimId = claim.claim_id;
-  el.dataset.status = claim.status || 'registered';
-  el.style.left   = `${rect.left}px`;
-  el.style.top    = `${rect.top}px`;
-  el.style.width  = `${rect.w}px`;
+  el.dataset.status = claim.status || "registered";
+  el.style.left = `${rect.left}px`;
+  el.style.top = `${rect.top}px`;
+  el.style.width = `${rect.w}px`;
   el.style.height = `${rect.h}px`;
   el.title = claim.claim_value || claim.claim_id;
-  el.setAttribute('aria-label', `Claim ${claim.claim_id}`);
-  el.addEventListener('click', () => emitClaimEvent(claim.claim_id));
+  el.setAttribute("aria-label", `Claim ${claim.claim_id}`);
+  el.addEventListener("click", () => emitClaimEvent(claim.claim_id));
   overlay.appendChild(el);
 }
 
@@ -118,13 +123,13 @@ async function loadClaims(url) {
 }
 
 async function bootstrap() {
-  const host = document.getElementById('live-paper-pdf-host');
+  const host = document.getElementById("live-paper-pdf-host");
   if (!host) return;
 
-  const pdfUrl       = host.dataset.pdfUrl;
-  const claimsUrl    = host.dataset.claimsUrl;
-  const pdfjsUrl     = host.dataset.pdfjsUrl;
-  const workerUrl    = host.dataset.pdfjsWorkerUrl;
+  const pdfUrl = host.dataset.pdfUrl;
+  const claimsUrl = host.dataset.claimsUrl;
+  const pdfjsUrl = host.dataset.pdfjsUrl;
+  const workerUrl = host.dataset.pdfjsWorkerUrl;
 
   let pdfjsLib;
   try {
@@ -160,8 +165,8 @@ async function bootstrap() {
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', bootstrap);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrap);
 } else {
   bootstrap();
 }
