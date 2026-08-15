@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Iterator
 
@@ -338,10 +339,24 @@ def test_viewer_css_failed_verification_renders_red_not_uncoloured():
     # never emits, so failures rendered uncoloured. Per clew palette
     # v1.3 (clew 0.7.0), missing carries its OWN red, distinct from
     # mismatch.
-    assert '.lp-claim[data-status="mismatch"]   { border-left-color: var(--lp-status-mismatch); }' in text
-    assert '.lp-claim[data-status="missing"]    { border-left-color: var(--lp-status-missing); }' in text
-    assert "--lp-status-mismatch:    #f85149;" in text
-    assert "--lp-status-missing:     #a40e26;" in text
+    #
+    # Matched with whitespace-tolerant patterns rather than exact
+    # strings: the repo's CSS formatter reflows one-line rules and drops
+    # column alignment, and this guard is about which VAR each status
+    # resolves to, not how the stylesheet is laid out. The literal form
+    # broke purely on reformatting once already.
+    assert re.search(
+        r'\.lp-claim\[data-status="mismatch"\]\s*\{\s*'
+        r"border-left-color:\s*var\(--lp-status-mismatch\)\s*;",
+        text,
+    )
+    assert re.search(
+        r'\.lp-claim\[data-status="missing"\]\s*\{\s*'
+        r"border-left-color:\s*var\(--lp-status-missing\)\s*;",
+        text,
+    )
+    assert re.search(r"--lp-status-mismatch:\s*#f85149\s*;", text)
+    assert re.search(r"--lp-status-missing:\s*#a40e26\s*;", text)
 
 
 # ──────────────────────────────────────────────────────────────────
