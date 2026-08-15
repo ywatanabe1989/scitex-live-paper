@@ -6,11 +6,14 @@
   --lp-accent: #7c5cbf;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--lp-bg);
   color: var(--lp-fg);
   line-height: 1.5;
@@ -32,7 +35,9 @@ body {
   margin: 0 0 24px;
 }
 
-.live-paper-header a { color: var(--lp-accent); }
+.live-paper-header a {
+  color: var(--lp-accent);
+}
 
 .live-paper-status pre {
   background: #313145;
@@ -158,18 +163,23 @@ body {
    * registered/not_found→grey. Legacy "partial" is normalized to
    * "suspect" at bundle ingest. verified/mismatch use dark-theme
    * variants of the static renderer's light-theme hexes. */
-  --lp-status-verified:    #2ea043;
-  --lp-status-suspect:     #d29922;
-  --lp-status-mismatch:    #f85149;
-  --lp-status-missing:     #a40e26;
-  --lp-status-registered:  #6e7681;
-  --lp-status-not_found:   #6e7681;
+  --lp-status-verified: #2ea043;
+  --lp-status-suspect: #d29922;
+  --lp-status-mismatch: #f85149;
+  --lp-status-missing: #a40e26;
+  --lp-status-registered: #6e7681;
+  --lp-status-not_found: #6e7681;
+  /* clew 1.4 "unsourced" folds into the amber bucket. Aliased, not a
+   * literal, so it tracks suspect through any future hue change — and
+   * so this stays correct even though the dark theme's suspect hex
+   * need not equal the static renderer's. */
+  --lp-status-unsourced: var(--lp-status-suspect);
   /* Transient client-side UI states (NOT clew statuses). */
-  --lp-status-error:       #f85149;
-  --lp-status-verifying:   #58a6ff;
-  --lp-status-fallback:    #a0a0b0;
+  --lp-status-error: #f85149;
+  --lp-status-verifying: #58a6ff;
+  --lp-status-fallback: #a0a0b0;
   /* M4 re-review BADGE vocabulary (paper-level, separate from claims). */
-  --lp-status-stale:       #d29922;
+  --lp-status-stale: #d29922;
   --lp-status-contradicted: #f85149;
 }
 
@@ -205,19 +215,39 @@ body {
   border-left: 3px solid var(--lp-status-registered);
 }
 
-.lp-claim[data-status="verified"]   { border-left-color: var(--lp-status-verified); }
-.lp-claim[data-status="suspect"]    { border-left-color: var(--lp-status-suspect); }
-.lp-claim[data-status="mismatch"]   { border-left-color: var(--lp-status-mismatch); }
-.lp-claim[data-status="missing"]    { border-left-color: var(--lp-status-missing); }
-.lp-claim[data-status="registered"] { border-left-color: var(--lp-status-registered); }
-.lp-claim[data-status="not_found"]  { border-left-color: var(--lp-status-not_found); }
-.lp-claim[data-status="verifying"]  { border-left-color: var(--lp-status-verifying); }
-.lp-claim[data-status="error"]      { border-left-color: var(--lp-status-error); }
+.lp-claim[data-status="verified"] {
+  border-left-color: var(--lp-status-verified);
+}
+.lp-claim[data-status="suspect"] {
+  border-left-color: var(--lp-status-suspect);
+}
+.lp-claim[data-status="mismatch"] {
+  border-left-color: var(--lp-status-mismatch);
+}
+.lp-claim[data-status="missing"] {
+  border-left-color: var(--lp-status-missing);
+}
+.lp-claim[data-status="registered"] {
+  border-left-color: var(--lp-status-registered);
+}
+.lp-claim[data-status="not_found"] {
+  border-left-color: var(--lp-status-not_found);
+}
+.lp-claim[data-status="unsourced"] {
+  border-left-color: var(--lp-status-unsourced);
+}
+.lp-claim[data-status="verifying"] {
+  border-left-color: var(--lp-status-verifying);
+}
+.lp-claim[data-status="error"] {
+  border-left-color: var(--lp-status-error);
+}
 
 .lp-claim-id {
   grid-column: 1 / 2;
   grid-row: 1;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.75em;
   color: var(--lp-muted);
 }
@@ -243,14 +273,33 @@ body {
   background: var(--lp-status-registered);
 }
 
-.lp-claim-status[data-status="verified"]   { background: var(--lp-status-verified); }
-.lp-claim-status[data-status="suspect"]    { background: var(--lp-status-suspect); }
-.lp-claim-status[data-status="mismatch"]   { background: var(--lp-status-mismatch); }
-.lp-claim-status[data-status="missing"]    { background: var(--lp-status-missing); }
-.lp-claim-status[data-status="registered"] { background: var(--lp-status-registered); }
-.lp-claim-status[data-status="not_found"]  { background: var(--lp-status-not_found); }
-.lp-claim-status[data-status="verifying"]  { background: var(--lp-status-verifying); }
-.lp-claim-status[data-status="error"]      { background: var(--lp-status-error); }
+.lp-claim-status[data-status="verified"] {
+  background: var(--lp-status-verified);
+}
+.lp-claim-status[data-status="suspect"] {
+  background: var(--lp-status-suspect);
+}
+.lp-claim-status[data-status="mismatch"] {
+  background: var(--lp-status-mismatch);
+}
+.lp-claim-status[data-status="missing"] {
+  background: var(--lp-status-missing);
+}
+.lp-claim-status[data-status="registered"] {
+  background: var(--lp-status-registered);
+}
+.lp-claim-status[data-status="not_found"] {
+  background: var(--lp-status-not_found);
+}
+.lp-claim-status[data-status="unsourced"] {
+  background: var(--lp-status-unsourced);
+}
+.lp-claim-status[data-status="verifying"] {
+  background: var(--lp-status-verifying);
+}
+.lp-claim-status[data-status="error"] {
+  background: var(--lp-status-error);
+}
 
 .lp-claim-reverify {
   grid-column: 3 / 4;
@@ -293,10 +342,18 @@ body {
   border-left: 4px solid var(--lp-status-stale);
 }
 
-.lp-re-review-badge[data-status="verified"]     { border-left-color: var(--lp-status-verified); }
-.lp-re-review-badge[data-status="stale"]        { border-left-color: var(--lp-status-stale); }
-.lp-re-review-badge[data-status="contradicted"] { border-left-color: var(--lp-status-contradicted); }
-.lp-re-review-badge[data-status="concerns"]     { border-left-color: var(--lp-status-stale); }
+.lp-re-review-badge[data-status="verified"] {
+  border-left-color: var(--lp-status-verified);
+}
+.lp-re-review-badge[data-status="stale"] {
+  border-left-color: var(--lp-status-stale);
+}
+.lp-re-review-badge[data-status="contradicted"] {
+  border-left-color: var(--lp-status-contradicted);
+}
+.lp-re-review-badge[data-status="concerns"] {
+  border-left-color: var(--lp-status-stale);
+}
 
 .lp-re-review-badge-label {
   font-weight: 600;

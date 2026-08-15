@@ -72,8 +72,16 @@ def handle_reverify(request) -> HttpResponse:
             "ok": true,
             "claim_id": "...",
             "verified_against": "<commit>",               # metadata echo
-            "status": "verified" | "suspect" | "mismatch" | "missing",
+            "status": "verified" | "suspect" | "mismatch" | "missing"
+                      | "unsourced",
                                                            # (clew ≥0.7.0;
+                                                           # "unsourced" is
+                                                           # clew ≥0.8.1 and
+                                                           # is passed through
+                                                           # verbatim — it
+                                                           # renders amber but
+                                                           # is NOT rewritten
+                                                           # to "suspect";
                                                            # older clews may
                                                            # return the
                                                            # pre-rename
@@ -241,6 +249,13 @@ def _normalize_result(
         # sees the v1.3 vocabulary.
         if status == "partial":
             status = "suspect"
+        # Deliberately NOT normalized: clew 0.8.1's "unsourced". It also
+        # renders amber, but it is a real, distinct state rather than an
+        # old name for suspect, so the word must survive to the SPA —
+        # the fold happens in CSS (``--lp-status-unsourced``), never
+        # here. Mapping it to "suspect" on this line would silently
+        # destroy the distinction on the live re-verify path only,
+        # leaving it disagreeing with the bundle-rendered sidebar.
         verified_at = claim.get("verified_at")
         # details = every top-level key except "claim", plus every claim
         # key except the two we promote (status/verified_at). Keep

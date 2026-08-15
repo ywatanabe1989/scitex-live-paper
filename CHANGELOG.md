@@ -16,6 +16,28 @@ may change without a changelog entry.
 
 ## [Unreleased]
 
+### Added
+
+- Support for clew's `unsourced` claim status (clew 0.8.1,
+  `claims.json` schema 1.4 / unified 1.6). `unsourced` is accepted by
+  `validate` as a resting claim status, and renders in the **amber
+  `suspect` colour** — one amber "questionable" bucket rather than a
+  row of its own.
+  The fold is a **colour-layer alias**, not a status rewrite: the
+  status string stays `unsourced` everywhere it is read or displayed,
+  so the sidebar still tells you *which* of the two amber states a
+  claim is in. This is deliberately unlike legacy `partial`, which
+  **is** normalized to `suspect` at ingest — `partial` was a rename
+  with no surviving concept, whereas `unsourced` is a distinct state.
+  The live re-verify endpoint likewise passes `unsourced` through
+  verbatim, so it cannot disagree with the rendered sidebar.
+  Colours come from clew's **fine** per-claim `color` palette, not the
+  coarse `display_color` / `display_group` fields — the coarse palette
+  buckets `mismatch`+`missing` into "failed" and `registered` into
+  "suspect", which would silently revert the v1.3 palette below.
+  clew's per-claim `grounded` (bool | null) is absorbed by
+  `Claim.extras`, so the schema bump needs no typed-field change.
+
 ### Fixed
 
 - M2 re-verify handlers (`api/claim/verify` + `api/claims/verify`) now
