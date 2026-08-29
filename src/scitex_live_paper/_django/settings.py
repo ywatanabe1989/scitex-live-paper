@@ -48,14 +48,11 @@ TEMPLATES = [
     },
 ]
 
-# In-memory SQLite — the M1 skeleton has no models of its own, but Django
-# refuses to boot without a default DB configured.
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
-}
+# No DATABASES entry on purpose. This skeleton declares no models and no
+# migrations, and never opens a connection, so Django's own empty default
+# is the honest configuration — declaring a database here would announce a
+# dependency the app does not have. A host project that mounts these views
+# supplies its own database settings.
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
