@@ -5,10 +5,10 @@ positional argument — and read the nested ``result["claim"]["status"]``
 that clew returns.
 
 clew is git-agnostic: ``verify_claim`` re-hashes the claim's source file
-against the CURRENT on-disk state of clew's project (it resolves its DB
-via ``SCITEX_CLEW_DB_PATH`` or by walking up to
-``.scitex/clew/runtime/db.sqlite``). It does NOT take a commit and does
-NOT check out git. ``pinned_commit`` is therefore METADATA only here —
+against the CURRENT on-disk state of clew's project (it resolves the Clew
+store via ``SCITEX_CLEW_DB_PATH``, or by walking up to the store under
+``.scitex/clew/runtime/``). It does NOT take a commit and does NOT check
+out git. ``pinned_commit`` is therefore METADATA only here —
 to re-verify against a specific commit, the host/deployment is
 responsible for checking out that commit and pointing clew's DB via
 ``SCITEX_CLEW_DB_PATH`` before serving. These handlers never mutate the
