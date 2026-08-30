@@ -5,14 +5,16 @@ positional argument — and read the nested ``result["claim"]["status"]``
 that clew returns.
 
 clew is git-agnostic: ``verify_claim`` re-hashes the claim's source file
-against the CURRENT on-disk state of clew's project (it resolves its DB
-via ``SCITEX_CLEW_DB_PATH`` or by walking up to
-``.scitex/clew/runtime/db.sqlite``). It does NOT take a commit and does
-NOT check out git. ``pinned_commit`` is therefore METADATA only here —
-to re-verify against a specific commit, the host/deployment is
-responsible for checking out that commit and pointing clew's DB via
-``SCITEX_CLEW_DB_PATH`` before serving. These handlers never mutate the
-working tree.
+against the CURRENT on-disk state of clew's project. It does NOT take a
+commit and does NOT check out git. ``pinned_commit`` is therefore
+METADATA only here — to re-verify against a specific commit, the
+host/deployment is responsible for checking out that commit before
+serving. These handlers never mutate the working tree.
+
+clew resolves its own store; live-paper passes no store argument and
+holds no opinion about where it lives. ``SCITEX_CLEW_DB_PATH`` used to
+select a per-project store file and is retired — clew has no database
+file, and ``SCITEX_STORE_DSN`` is the one switch, owned by clew.
 
 Boundary unchanged: ``scitex-clew`` owns the claim model + the verify
 operation. These handlers are thin pass-throughs. When ``scitex-clew``
@@ -47,8 +49,7 @@ def handle_reverify(request) -> HttpResponse:
     live-paper verifies the claim against the CURRENT on-disk state of
     clew's project. To re-verify against a specific commit, the
     host/deployment is responsible for checking out ``pinned_commit``
-    and pointing clew's DB via ``SCITEX_CLEW_DB_PATH`` before serving.
-    This handler never mutates the working tree — ``pinned_commit`` is
+    before serving. This handler never mutates the working tree — ``pinned_commit`` is
     accepted and echoed back as ``verified_against`` metadata only, and
     is NOT passed to ``verify_claim``.
 

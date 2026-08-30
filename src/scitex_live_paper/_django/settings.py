@@ -48,14 +48,12 @@ TEMPLATES = [
     },
 ]
 
-# In-memory SQLite — the M1 skeleton has no models of its own, but Django
-# refuses to boot without a default DB configured.
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
-}
+# No database at all. live-paper has no models of its own and every handler
+# reads the bundle off disk or delegates to scitex-clew, which owns its own
+# store. Django accepts an empty mapping and installs its dummy backend, so
+# any accidental ORM call fails loudly here instead of silently succeeding
+# against a scratch database that nothing else would ever read.
+DATABASES: dict[str, dict[str, str]] = {}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
